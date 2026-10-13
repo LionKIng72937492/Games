@@ -1,0 +1,4016 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GALAXY ATTACK: BROWSER EDITION - DELUXE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #00f0ff;
+      --secondary: #ff007f;
+      --accent: #ffe600;
+      --success: #39ff14;
+      --danger: #ff2a2a;
+      --purple: #a855f7;
+      --dark-bg: #05040d;
+      --panel-bg: rgba(12, 10, 28, 0.88);
+      --border-glow: rgba(0, 240, 255, 0.45);
+      --card-bg: rgba(18, 14, 40, 0.82);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #0e0928 0%, #05040d 75%, #000000 100%);
+      font-family: 'Rajdhani', sans-serif;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 760px;
+      max-height: 1000px;
+      aspect-ratio: 760 / 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 60px rgba(0, 240, 255, 0.25), 0 0 100px rgba(255, 0, 127, 0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      background-color: #04020a;
+      border: 1px solid rgba(0, 240, 255, 0.35);
+    }
+
+    @media (max-aspect-ratio: 760/1000) {
+      #game-container {
+        width: 100vw;
+        height: auto;
+        border-radius: 0;
+        border: none;
+      }
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    /* Scanline & CRT Vignette Overlay */
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.22) 50%,
+        rgba(0, 0, 0, 0.22)
+      );
+      background-size: 100% 4px;
+      opacity: 0.65;
+      z-index: 5;
+    }
+
+    .vignette {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      box-shadow: inset 0 0 85px rgba(0, 0, 0, 0.9);
+      z-index: 6;
+    }
+
+    /* Top HUD Overlay */
+    #hud-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.3s;
+    }
+
+    #hud-overlay.hidden {
+      opacity: 0;
+    }
+
+    .hud-box {
+      background: var(--panel-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border-glow);
+      border-radius: 8px;
+      padding: 7px 13px;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hud-title {
+      font-size: 10px;
+      font-family: 'Orbitron', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #8bb8e8;
+    }
+
+    .hud-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'Orbitron', monospace;
+      color: #fff;
+      text-shadow: 0 0 8px var(--primary);
+    }
+
+    .hud-lives {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      margin-top: 3px;
+    }
+
+    .life-icon {
+      width: 20px;
+      height: 20px;
+      filter: drop-shadow(0 0 5px #00f0ff);
+      transition: opacity 0.3s;
+    }
+
+    .life-icon.lost {
+      opacity: 0.15;
+      filter: grayscale(1);
+    }
+
+    .hud-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .wave-badge {
+      background: linear-gradient(135deg, rgba(255, 0, 127, 0.35), rgba(0, 240, 255, 0.35));
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: 1.8px;
+      color: #fff;
+      text-shadow: 0 0 10px #ff007f;
+      animation: pulse-glow 2s infinite alternate;
+    }
+
+    .diff-badge-hud {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.2);
+      text-shadow: 0 0 5px currentColor;
+    }
+
+    @keyframes pulse-glow {
+      from { box-shadow: 0 0 5px rgba(255, 0, 127, 0.4); }
+      to { box-shadow: 0 0 18px rgba(0, 240, 255, 0.85); }
+    }
+
+    .hud-weapon {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 3px;
+    }
+
+    .weapon-pips {
+      display: flex;
+      gap: 3px;
+    }
+
+    .weapon-pip {
+      width: 7px;
+      height: 11px;
+      background: #1a2238;
+      border-radius: 2px;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+
+    .weapon-pip.active {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    .hud-sub-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 3px;
+    }
+
+    .coin-counter {
+      color: #ffe600;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      text-shadow: 0 0 6px rgba(255, 230, 0, 0.6);
+    }
+
+    /* Boss HUD */
+    #boss-hud {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 82%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      z-index: 12;
+      animation: slideDown 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translate(-50%, -20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    .boss-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2.5px;
+      color: #ff2a2a;
+      text-shadow: 0 0 10px #ff007f;
+      margin-bottom: 4px;
+    }
+
+    .boss-bar-frame {
+      width: 100%;
+      height: 13px;
+      background: rgba(10, 5, 20, 0.9);
+      border: 1px solid #ff2a2a;
+      border-radius: 8px;
+      padding: 2px;
+      box-shadow: 0 0 15px rgba(255, 42, 42, 0.5);
+    }
+
+    .boss-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff007f, #ff2a2a, #ffe600);
+      border-radius: 4px;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 10px #ff2a2a;
+    }
+
+    .helper-bars {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .helper-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .helper-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: #00f0ff;
+    }
+
+    .helper-bar-frame {
+      width: 100%;
+      height: 6px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid #00f0ff;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .helper-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: #00f0ff;
+      transition: width 0.1s;
+    }
+
+    /* Achievement Popup Notification */
+    #achievement-toast {
+      position: absolute;
+      top: 25px;
+      right: 25px;
+      background: rgba(12, 10, 30, 0.95);
+      border: 1.5px solid #ffe600;
+      border-radius: 10px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 0 25px rgba(255, 230, 0, 0.5);
+      z-index: 100;
+      transform: translateX(140%);
+      transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      pointer-events: none;
+    }
+
+    #achievement-toast.show {
+      transform: translateX(0);
+    }
+
+    .ach-toast-icon {
+      font-size: 24px;
+    }
+
+    .ach-toast-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      color: #ffe600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .ach-toast-name {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    /* Diagnostic Debug Banner (Toggle with F3) */
+    #debug-hud {
+      position: absolute;
+      bottom: 6px;
+      left: 10px;
+      font-family: monospace;
+      font-size: 10px;
+      color: #39ff14;
+      background: rgba(0,0,0,0.7);
+      padding: 2px 6px;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 25;
+      display: none;
+    }
+
+    /* Modal Overlay Architecture */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(4, 3, 12, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      text-align: center;
+      z-index: 30;
+      opacity: 1;
+      transition: opacity 0.25s ease;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .neon-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, #00f0ff, #ffffff, #ff007f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(0, 240, 255, 0.6);
+      margin-bottom: 6px;
+      line-height: 1.1;
+    }
+
+    .neon-subtitle {
+      font-family: 'Orbitron', monospace;
+      font-size: 12px;
+      letter-spacing: 5px;
+      color: #ffe600;
+      text-shadow: 0 0 8px #ffe600;
+      margin-bottom: 20px;
+    }
+
+    .panel-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 16px 20px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 18px;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .menu-button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      width: 100%;
+      max-width: 340px;
+      margin-bottom: 14px;
+    }
+
+    .game-btn {
+      position: relative;
+      background: linear-gradient(135deg, #00f0ff, #0077ff);
+      color: #05040d;
+      border: none;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: 2.5px;
+      padding: 13px 28px;
+      border-radius: 26px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.5), 0 0 35px rgba(0, 240, 255, 0.2);
+      transition: all 0.18s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      text-transform: uppercase;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .game-btn:hover {
+      transform: scale(1.04) translateY(-2px);
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.85), 0 0 50px rgba(0, 240, 255, 0.35);
+      background: linear-gradient(135deg, #4ef2ff, #0099ff);
+    }
+
+    .game-btn:active {
+      transform: scale(0.97);
+    }
+
+    .game-btn.secondary {
+      background: rgba(18, 14, 40, 0.8);
+      color: #ffffff;
+      border: 1px solid var(--border-glow);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+      font-size: 13px;
+      padding: 11px 22px;
+      font-weight: 700;
+    }
+
+    .game-btn.secondary:hover {
+      background: rgba(0, 240, 255, 0.16);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+      color: #00f0ff;
+    }
+
+    .game-btn.danger {
+      background: linear-gradient(135deg, #ff2a2a, #b30000);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(255, 42, 42, 0.5);
+    }
+
+    .game-btn.danger:hover {
+      background: linear-gradient(135deg, #ff5555, #cc0000);
+      box-shadow: 0 0 25px rgba(255, 42, 42, 0.8);
+    }
+
+    /* Difficulty Selection Cards */
+    .diff-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 20px;
+    }
+
+    .diff-card {
+      background: rgba(14, 11, 32, 0.85);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 14px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .diff-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(0, 240, 255, 0.6);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.25);
+    }
+
+    .diff-card.selected {
+      border-color: var(--primary);
+      box-shadow: 0 0 22px var(--primary);
+      background: rgba(0, 240, 255, 0.12);
+    }
+
+    .diff-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+    }
+
+    .diff-desc {
+      font-size: 11px;
+      color: #a4b3cf;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .diff-perks {
+      font-size: 10px;
+      font-family: 'Orbitron', monospace;
+      color: #ffe600;
+      margin-top: 4px;
+    }
+
+    /* Upgrade Shop Grid */
+    .shop-coins-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 12px;
+      padding: 8px 16px;
+      background: rgba(15, 12, 35, 0.9);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 230, 0, 0.4);
+    }
+
+    .shop-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-bottom: 18px;
+    }
+
+    .shop-item {
+      background: rgba(16, 12, 36, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .shop-item:hover {
+      border-color: var(--primary);
+    }
+
+    .shop-item-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .shop-item-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .shop-item-effect {
+      font-size: 11px;
+      color: #79a6d2;
+    }
+
+    .shop-pips {
+      display: flex;
+      gap: 3px;
+      margin-top: 3px;
+    }
+
+    .shop-pip {
+      width: 8px;
+      height: 10px;
+      background: #141b2f;
+      border-radius: 2px;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+
+    .shop-pip.active {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    .btn-buy {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #ffe600, #ff8800);
+      border: none;
+      color: #000;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 0 10px rgba(255, 230, 0, 0.4);
+      transition: all 0.15s;
+    }
+
+    .btn-buy:hover:not(:disabled) {
+      transform: scale(1.06);
+      box-shadow: 0 0 16px rgba(255, 230, 0, 0.7);
+    }
+
+    .btn-buy:disabled {
+      background: #252836;
+      color: #6c7285;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* Stats & Achievements Panels */
+    .stats-table {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: rgba(14, 11, 32, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+
+    .stat-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      color: #8da4c4;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-number {
+      font-family: 'Orbitron', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffe600;
+      text-shadow: 0 0 6px #ffe600;
+    }
+
+    .achievements-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 420px;
+      overflow-y: auto;
+      margin-bottom: 18px;
+      padding-right: 4px;
+    }
+
+    .ach-card {
+      background: rgba(14, 11, 32, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .ach-card.unlocked {
+      border-color: #ffe600;
+      box-shadow: 0 0 12px rgba(255, 230, 0, 0.25);
+    }
+
+    .ach-icon {
+      font-size: 24px;
+      filter: grayscale(1);
+      opacity: 0.4;
+    }
+
+    .ach-card.unlocked .ach-icon {
+      filter: grayscale(0);
+      opacity: 1;
+    }
+
+    /* Settings UI */
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .setting-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      color: #c0d4f5;
+    }
+
+    /* On-Screen Quick Actions */
+    .controls-overlay {
+      position: absolute;
+      bottom: 18px;
+      right: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 15;
+    }
+
+    .round-action-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(15, 12, 35, 0.85);
+      border: 1.5px solid var(--border-glow);
+      color: #fff;
+      font-size: 19px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+      transition: transform 0.15s;
+    }
+
+    .round-action-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .round-action-btn.bomb-btn {
+      border-color: #ff2a2a;
+      box-shadow: 0 0 18px rgba(255, 42, 42, 0.4);
+      background: radial-gradient(circle, rgba(255, 42, 42, 0.35) 0%, rgba(15, 12, 35, 0.85) 80%);
+    }
+
+    .key-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      color: #00f0ff;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <canvas id="gameCanvas" width="760" height="1000"></canvas>
+    
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <div id="debug-hud">DEBUG: ACTIVE</div>
+
+    <!-- Achievement Toast Notification -->
+    <div id="achievement-toast">
+      <div class="ach-toast-icon">🏆</div>
+      <div style="display: flex; flex-direction: column;">
+        <span class="ach-toast-title">ERFOLG FREIGESCHALTET</span>
+        <span class="ach-toast-name" id="toast-ach-name">Boss Slayer</span>
+      </div>
+    </div>
+
+    <!-- Top HUD Overlay -->
+    <div id="hud-overlay" class="hidden">
+      <div class="hud-box">
+        <span class="hud-title">SCORE</span>
+        <span class="hud-value" id="hud-score">000,000</span>
+        <div class="hud-sub-row">
+          <div class="hud-weapon">
+            <span class="hud-title">WAFFE</span>
+            <div class="weapon-pips" id="weapon-pips">
+              <div class="weapon-pip active"></div>
+              <div class="weapon-pip"></div>
+              <div class="weapon-pip"></div>
+              <div class="weapon-pip"></div>
+              <div class="weapon-pip"></div>
+            </div>
+          </div>
+          <div class="coin-counter">🪙 <span id="hud-run-coins">0</span></div>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="wave-badge" id="hud-wave">WELLE 1</div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 3px;">
+          <span class="diff-badge-hud" id="hud-diff-badge" style="color: #00f0ff;">KOMMANDANT</span>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span style="font-size: 14px;">💣</span>
+            <span id="hud-bomb-count" style="font-family:'Orbitron'; font-weight:700; color:#ff5555; font-size:13px;">2</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-box" style="align-items: flex-end;">
+        <span class="hud-title">SCHIFFE</span>
+        <div class="hud-lives" id="hud-lives-container">
+          <!-- Filled dynamically -->
+        </div>
+        <div style="margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+          <span class="hud-title">HI:</span>
+          <span id="hud-hiscore" style="font-family:'Orbitron'; font-size:12px; color: #ffe600;">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Boss Health Bar -->
+    <div id="boss-hud">
+      <div class="boss-name" id="boss-name-label">⚠️ DREADNOUGHT ALIEN FLAGSHIP ⚠️</div>
+      <div class="boss-bar-frame">
+        <div class="boss-bar-fill" id="boss-bar-fill"></div>
+      </div>
+      <div class="helper-bars" id="boss-helpers-bar" style="display: none;">
+        <div class="helper-box">
+          <span class="helper-label" id="helper-l-label">UNTERDRÜCKER (LINKS)</span>
+          <div class="helper-bar-frame"><div class="helper-bar-fill" id="helper-l-fill"></div></div>
+        </div>
+        <div class="helper-box">
+          <span class="helper-label" id="helper-r-label" style="text-align: right; color:#ff007f;">DISRUPTOR (RECHTS)</span>
+          <div class="helper-bar-frame"><div class="helper-bar-fill" id="helper-r-fill" style="background:#ff007f;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- On-screen Quick Actions -->
+    <div class="controls-overlay" id="quick-controls" style="display: none;">
+      <button class="round-action-btn bomb-btn" id="btn-bomb" title="Mega-Bombe (Taste: B)">💣</button>
+      <button class="round-action-btn" id="btn-sound" title="Audio Umschalten">🔊</button>
+      <button class="round-action-btn" id="btn-pause" title="Pause (ESC)">⏸️</button>
+    </div>
+
+    <!-- 1. MAIN MENU MODAL -->
+    <div class="modal-overlay" id="mainmenu-modal">
+      <h1 class="neon-title">GALAXY ATTACK</h1>
+      <div class="neon-subtitle">PROFESSIONAL DELUXE EDITION</div>
+
+      <div class="panel-card" style="display: flex; justify-content: space-around; padding: 12px 16px;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="hud-title">GUTHABEN</span>
+          <span style="font-family:'Orbitron'; font-size:20px; font-weight:700; color:#ffe600;" id="menu-coins">🪙 0</span>
+        </div>
+        <div style="width: 1px; background: rgba(255,255,255,0.15);"></div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="hud-title">REKORD</span>
+          <span style="font-family:'Orbitron'; font-size:20px; font-weight:700; color:#00f0ff;" id="menu-hiscore">0</span>
+        </div>
+      </div>
+
+      <div class="menu-button-group">
+        <button class="game-btn" id="btn-menu-play">🚀 EINSATZ STARTEN</button>
+        <button class="game-btn secondary" id="btn-menu-hangar">🛠️ HANGAR & UPGRADES</button>
+        <button class="game-btn secondary" id="btn-menu-stats">📊 PILOTEN-STATISTIK</button>
+        <button class="game-btn secondary" id="btn-menu-achievements">🏆 ERFOLGE</button>
+        <button class="game-btn secondary" id="btn-menu-settings">⚙️ EINSTELLUNGEN</button>
+      </div>
+
+      <div style="font-size: 11px; color: #7f93b5; font-family: 'Orbitron'; letter-spacing: 1px;">
+        V2.2 DELUXE • BALANCED COMBAT ENGINE
+      </div>
+    </div>
+
+    <!-- 2. DIFFICULTY SELECTION MODAL -->
+    <div class="modal-overlay hidden" id="difficulty-modal">
+      <h2 class="neon-title" style="font-size: 28px;">SCHWIERIGKEITSGRAD</h2>
+      <div class="neon-subtitle">WÄHLE DEINE EINSATZHÄRTE</div>
+
+      <div class="diff-cards-grid">
+        <div class="diff-card" data-diff="EASY">
+          <span class="diff-title" style="color: #39ff14;">🟢 KADETT</span>
+          <span class="diff-desc">Für Flugschüler. Schwächere Feinde, langsamere Laser, lange Reaktionsfenster.</span>
+          <span class="diff-perks">HP: -30% • Speed: -25% • +1 Leben</span>
+        </div>
+        <div class="diff-card selected" data-diff="MEDIUM">
+          <span class="diff-title" style="color: #00f0ff;">🔵 KOMMANDANT</span>
+          <span class="diff-desc">Die Standard-Erfahrung. Perfekt ausbalancierte Gegnerwellen und Bossphasen.</span>
+          <span class="diff-perks">Standard • 1.5x Münzbonus</span>
+        </div>
+        <div class="diff-card" data-diff="HARD">
+          <span class="diff-title" style="color: #ffe600;">🟡 VETERAN</span>
+          <span class="diff-desc">Aggressivere Flotten, schnelle Salven, verkürzte Boss-Telegraphs.</span>
+          <span class="diff-perks">HP: +35% • Speed: +25% • 2.2x Münzen</span>
+        </div>
+        <div class="diff-card" data-diff="ULTRA">
+          <span class="diff-title" style="color: #ff2a2a;">🔴 ALPTRAUM</span>
+          <span class="diff-desc">Für Bullet-Hell-Meister! Gnadenlose Dichte, extreme Dodges, maximale Beute.</span>
+          <span class="diff-perks">HP: +70% • Speed: +45% • 3.5x Münzen</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; width: 100%; max-width: 380px;">
+        <button class="game-btn secondary" style="flex: 1;" id="btn-diff-back">ZURÜCK</button>
+        <button class="game-btn" style="flex: 2;" id="btn-diff-confirm">FLUG STARTEN</button>
+      </div>
+    </div>
+
+    <!-- 3. UPGRADE HANGAR MODAL -->
+    <div class="modal-overlay hidden" id="hangar-modal">
+      <h2 class="neon-title" style="font-size: 28px;">HANGAR-WERFT</h2>
+      <div class="neon-subtitle">PERMANENTE SCHIFFS-UPGRADES</div>
+
+      <div class="shop-coins-header">
+        <span style="font-family:'Orbitron'; font-size:12px; color:#8da4c4;">VERFÜGBARE CREDITS:</span>
+        <span style="font-family:'Orbitron'; font-size:18px; font-weight:700; color:#ffe600;" id="hangar-coins">🪙 0</span>
+      </div>
+
+      <div class="shop-grid" id="hangar-items-list">
+        <!-- Filled dynamically -->
+      </div>
+
+      <button class="game-btn secondary" id="btn-hangar-back" style="max-width: 200px;">ZURÜCK ZUM MENÜ</button>
+    </div>
+
+    <!-- 4. PILOT STATISTICS MODAL -->
+    <div class="modal-overlay hidden" id="stats-modal">
+      <h2 class="neon-title" style="font-size: 28px;">PILOTEN-STATISTIK</h2>
+      <div class="neon-subtitle">DEINE GESAMTKARRIERE</div>
+
+      <div class="stats-table">
+        <div class="stat-card"><span class="stat-title">GESAMTSPIELE</span><span class="stat-number" id="st-games">0</span></div>
+        <div class="stat-card"><span class="stat-title">SIEGE / BOSS-KILLS</span><span class="stat-number" id="st-bosses">0</span></div>
+        <div class="stat-card"><span class="stat-title">ABGESCHOSSENE FEINDE</span><span class="stat-number" id="st-kills">0</span></div>
+        <div class="stat-card"><span class="stat-title">GESAMTE CREDITS</span><span class="stat-number" id="st-coins">0</span></div>
+        <div class="stat-card"><span class="stat-title">REKORD KADETT (EASY)</span><span class="stat-number" id="st-easy">0</span></div>
+        <div class="stat-card"><span class="stat-title">REKORD KOMMANDANT</span><span class="stat-number" id="st-med">0</span></div>
+        <div class="stat-card"><span class="stat-title">REKORD VETERAN (HARD)</span><span class="stat-number" id="st-hard">0</span></div>
+        <div class="stat-card"><span class="stat-title">REKORD ALPTRAUM (ULTRA)</span><span class="stat-number" id="st-ultra">0</span></div>
+        <div class="stat-card" style="grid-column: span 2;"><span class="stat-title">LÄNGSTE ÜBERLEBENSZEIT</span><span class="stat-number" id="st-time">00:00</span></div>
+      </div>
+
+      <button class="game-btn secondary" id="btn-stats-back" style="max-width: 200px;">ZURÜCK</button>
+    </div>
+
+    <!-- 5. ACHIEVEMENTS MODAL -->
+    <div class="modal-overlay hidden" id="achievements-modal">
+      <h2 class="neon-title" style="font-size: 28px;">ORDEN & ERFOLGE</h2>
+      <div class="neon-subtitle">BESONDERE MEILENSTEINE</div>
+
+      <div class="achievements-grid" id="achievements-list">
+        <!-- Filled dynamically -->
+      </div>
+
+      <button class="game-btn secondary" id="btn-ach-back" style="max-width: 200px;">ZURÜCK</button>
+    </div>
+
+    <!-- 6. SETTINGS MODAL -->
+    <div class="modal-overlay hidden" id="settings-modal">
+      <h2 class="neon-title" style="font-size: 28px;">EINSTELLUNGEN</h2>
+      <div class="neon-subtitle">KONFIGURATION & BARRIEREFREIHEIT</div>
+
+      <div class="panel-card" style="max-width: 420px; display: flex; flex-direction: column; gap: 10px;">
+        <div class="setting-row">
+          <span class="setting-label">AUDIO SOUNDEFFEKTE</span>
+          <button class="game-btn secondary" id="btn-toggle-sound" style="padding: 6px 14px;">🔊 AKTIV</button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">BILDSCHIRMSCHÜTTERUNG (SHAKE)</span>
+          <button class="game-btn secondary" id="btn-toggle-shake" style="padding: 6px 14px;">AN (100%)</button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">BLITZEFFEKTE (FLASH FX)</span>
+          <button class="game-btn secondary" id="btn-toggle-flash" style="padding: 6px 14px;">AN</button>
+        </div>
+        <div class="setting-row" style="border-bottom: none; padding-top: 14px;">
+          <span class="setting-label" style="color: #ff7777;">SPIELSTAND ZURÜCKSETZEN</span>
+          <button class="game-btn danger" id="btn-reset-save" style="font-size: 11px; padding: 7px 14px;">RESET...</button>
+        </div>
+      </div>
+
+      <button class="game-btn secondary" id="btn-settings-back" style="max-width: 200px;">ZURÜCK</button>
+    </div>
+
+    <!-- 7. RESET CONFIRMATION DIALOG -->
+    <div class="modal-overlay hidden" id="reset-confirm-modal" style="z-index: 50;">
+      <h2 class="neon-title" style="color: #ff2a2a; text-shadow: 0 0 25px #ff2a2a; font-size: 24px;">FORTSCHRITT LÖSCHEN?</h2>
+      <div class="panel-card" style="max-width: 360px;">
+        <p style="color: #ff9999; margin-bottom: 12px;">
+          Bist du absolut sicher? Alle erspielten Credits, Schiffs-Upgrades und Rekorde werden unwiderruflich gelöscht!
+        </p>
+        <div style="display: flex; gap: 10px;">
+          <button class="game-btn secondary" style="flex: 1;" id="btn-cancel-reset">ABBRECHEN</button>
+          <button class="game-btn danger" style="flex: 1;" id="btn-confirm-reset">JA, LÖSCHEN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. RUN COMPLETION / RESULTS MODAL -->
+    <div class="modal-overlay hidden" id="results-modal">
+      <h1 class="neon-title" id="results-title">EINSATZ BEENDET</h1>
+      <div class="neon-subtitle" id="results-subtitle">MISSION AUSGEWERTET</div>
+
+      <div class="panel-card" style="max-width: 440px;">
+        <div class="stats-table" style="margin-bottom: 12px;">
+          <div class="stat-card">
+            <span class="stat-title">SCORE ERREICHT</span>
+            <span class="stat-number" id="res-score">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-title">VERDIENTE CREDITS</span>
+            <span class="stat-number" id="res-coins" style="color: #ffe600;">🪙 +0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-title">WELLE / SEKTOR</span>
+            <span class="stat-number" id="res-wave" style="color: #ff007f;">1</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-title">BOSSE BEZWUNGEN</span>
+            <span class="stat-number" id="res-bosses">0</span>
+          </div>
+        </div>
+        <p id="res-record-badge" style="display: none; color: #ffe600; font-family:'Orbitron'; font-weight:700; font-size:13px; animation: pulse-glow 1s infinite alternate;">
+          🌟 NEUER HIGHSCORE REKORD ERREICHT! 🌟
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 12px; width: 100%; max-width: 380px;">
+        <button class="game-btn secondary" style="flex: 1;" id="btn-res-menu">HAUPTMENÜ</button>
+        <button class="game-btn" style="flex: 1.3;" id="btn-res-retry">NOCHMAL FLIEGEN</button>
+      </div>
+    </div>
+
+    <!-- 9. PAUSE MODAL -->
+    <div class="modal-overlay hidden" id="pause-modal">
+      <h2 class="neon-title">MISSION PAUSIERT</h2>
+      <div class="neon-subtitle">SYSTEME IN BEREITSCHAFT</div>
+      <div class="panel-card" style="max-width: 320px;">
+        <p style="color: #8da4c4; margin-bottom: 8px;">Aktiver Schwierigkeitsgrad: <strong id="pause-diff-text" style="color:#00f0ff;">KOMMANDANT</strong></p>
+        <p style="font-size: 12px; color: #627b9f;">Drücke <span class="key-badge">ESC</span> oder klicke Fortsetzen.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 280px;">
+        <button class="game-btn" id="btn-resume">FORTSETZEN</button>
+        <button class="game-btn secondary" id="btn-pause-abort">EINSATZ ABBRECHEN</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * GALAXY ATTACK: BROWSER EDITION - DELUXE
+     * Balanced Combat, Reliable Boss Lifecycle & Visual Hierarchy Engine
+     * =========================================================================
+     */
+
+    // --- CENTRALIZED BALANCING CONFIGURATION ---
+    const BALANCE_CONFIG = {
+      player: {
+        baseSpeed: 9.5,
+        baseLives: 3,
+        maxLivesHardCap: 5,            // Absolute max lives holding cap!
+        invulnerableTimeAfterHit: 120, // 2.0s
+        respawnInvulnerableTime: 140,  // 2.3s
+        maxWeaponLevel: 5,
+        baseBombCapacity: 2,
+        maxBombCapacity: 5
+      },
+      drops: {
+        baseEnemyDropChance: 0.05,     // 5% standard enemy drop chance (was 26%!)
+        cruiserDropChance: 0.12,       // 12% on cruisers
+        phantomDropChance: 0.15,       // 15% on elite phantoms
+        minDropIntervalFrames: 360,    // 6 seconds anti-spam cooldown between powerups
+        weights: {
+          laser: 40,
+          shield: 25,
+          bomb: 20,
+          heart: 15
+        }
+      },
+      bomb: {
+        bossDamage: 1400,              // Balanced burst against bosses
+        enemyDamage: 9999,             // Vaporizes standard screen enemies
+        screenShakeIntensity: 28,
+        visualDurationFrames: 50
+      },
+      bosses: {
+        sentinel: {
+          baseHp: 8500,                // Durable encounter taking 30-45s
+          hpPerWave: 1500,
+          telegraphDurationEasy: 85,
+          telegraphDurationMed: 60,
+          telegraphDurationHard: 45,
+          telegraphDurationUltra: 32,
+          laserBeamWidth: 44,
+          sweepLaserSpeed: 0.028
+        },
+        guardians: {
+          carrierBaseHp: 13500,
+          carrierHpPerWave: 2200,
+          helperBaseHp: 3200,
+          helperHpPerWave: 600,
+          berserkShotInterval: 18
+        }
+      }
+    };
+
+    // --- CONFIGURATION: CENTRALIZED DIFFICULTIES ---
+    const DIFFICULTIES = {
+      EASY: {
+        id: 'EASY',
+        label: 'KADETT',
+        color: '#39ff14',
+        enemyHpMult: 0.7,
+        enemyDmgMult: 0.65,
+        bulletSpeedMult: 0.75,
+        bossTelegraphMult: 1.4, // 40% more warning time
+        coinMult: 1.0,
+        scoreMult: 0.8,
+        playerLifeBonus: 1
+      },
+      MEDIUM: {
+        id: 'MEDIUM',
+        label: 'KOMMANDANT',
+        color: '#00f0ff',
+        enemyHpMult: 1.0,
+        enemyDmgMult: 1.0,
+        bulletSpeedMult: 1.0,
+        bossTelegraphMult: 1.0,
+        coinMult: 1.5,
+        scoreMult: 1.0,
+        playerLifeBonus: 0
+      },
+      HARD: {
+        id: 'HARD',
+        label: 'VETERAN',
+        color: '#ffe600',
+        enemyHpMult: 1.35,
+        enemyDmgMult: 1.3,
+        bulletSpeedMult: 1.25,
+        bossTelegraphMult: 0.75,
+        coinMult: 2.2,
+        scoreMult: 1.5,
+        playerLifeBonus: 0
+      },
+      ULTRA: {
+        id: 'ULTRA',
+        label: 'ALPTRAUM',
+        color: '#ff2a2a',
+        enemyHpMult: 1.7,
+        enemyDmgMult: 1.6,
+        bulletSpeedMult: 1.45,
+        bossTelegraphMult: 0.55,
+        coinMult: 3.5,
+        scoreMult: 2.5,
+        playerLifeBonus: 0
+      }
+    };
+
+    // --- CONFIGURATION: PERMANENT UPGRADES ---
+    const UPGRADE_DEFS = {
+      fireRate: {
+        id: 'fireRate',
+        name: 'Schnellfeuer-Verschluss',
+        icon: '⚡',
+        maxLevel: 5,
+        costs: [80, 200, 450, 950, 1900],
+        getBonusText: (lvl) => `-${lvl * 6}% Nachladezeit`,
+        getNextText: (lvl) => lvl >= 5 ? 'MAX LEVEL' : `+6% Feuerrate (Stufe ${lvl + 1})`
+      },
+      damage: {
+        id: 'damage',
+        name: 'Plasma-Verstärker',
+        icon: '💥',
+        maxLevel: 5,
+        costs: [100, 250, 600, 1200, 2400],
+        getBonusText: (lvl) => `+${lvl * 15}% Geschossschaden`,
+        getNextText: (lvl) => lvl >= 5 ? 'MAX LEVEL' : `+15% Schaden (Stufe ${lvl + 1})`
+      },
+      health: {
+        id: 'health',
+        name: 'Rumpf-Titanpanzerung',
+        icon: '❤️',
+        maxLevel: 3,
+        costs: [200, 600, 1500],
+        getBonusText: (lvl) => `+${lvl} Extra-Startleben`,
+        getNextText: (lvl) => lvl >= 3 ? 'MAX LEVEL' : `+1 Startleben (Stufe ${lvl + 1})`
+      },
+      speed: {
+        id: 'speed',
+        name: 'Hyper-Antriebsbooster',
+        icon: '🚀',
+        maxLevel: 4,
+        costs: [90, 220, 500, 1100],
+        getBonusText: (lvl) => `+${lvl * 10}% Manövrier-Speed`,
+        getNextText: (lvl) => lvl >= 4 ? 'MAX LEVEL' : `+10% Geschwindigkeit (Stufe ${lvl + 1})`
+      },
+      shieldBattery: {
+        id: 'shieldBattery',
+        name: 'Schild-Generator',
+        icon: '🛡️',
+        maxLevel: 4,
+        costs: [150, 400, 900, 2000],
+        getBonusText: (lvl) => lvl === 0 ? 'Kein Start-Schild' : (lvl < 3 ? 'Startet mit Kraftfeld' : 'Startet mit Kraftfeld + Auto-Regen'),
+        getNextText: (lvl) => lvl >= 4 ? 'MAX LEVEL' : (lvl === 0 ? 'Startet Lauf mit Schild' : 'Schild lädt sich nach 60s auf')
+      },
+      magnetRewards: {
+        id: 'magnetRewards',
+        name: 'Traktorstrahl & Plünderer',
+        icon: '🧲',
+        maxLevel: 5,
+        costs: [70, 180, 400, 850, 1700],
+        getBonusText: (lvl) => `+${lvl * 25}% Magnet-Reichweite & +${lvl * 15}% Münzen`,
+        getNextText: (lvl) => lvl >= 5 ? 'MAX LEVEL' : `+25% Magnet & +15% Münzen`
+      },
+      bombs: {
+        id: 'bombs',
+        name: 'Mega-Bomben-Magazin',
+        icon: '💣',
+        maxLevel: 3,
+        costs: [120, 350, 950],
+        getBonusText: (lvl) => `+${lvl} Startbombe(n)`,
+        getNextText: (lvl) => lvl >= 3 ? 'MAX LEVEL' : `+1 zusätzliche Startbombe`
+      }
+    };
+
+    // --- CONFIGURATION: ACHIEVEMENTS ---
+    const ACHIEVEMENT_DEFS = {
+      first_kill: { id: 'first_kill', icon: '🎯', title: 'Erster Treffer', desc: 'Besiege deinen ersten feindlichen Invasor.' },
+      boss1_slain: { id: 'boss1_slain', icon: '⚡', title: 'Laser-Bezähmer', desc: 'Zerstöre den gefürchteten Laser-Sentinel.' },
+      boss2_slain: { id: 'boss2_slain', icon: '🛡️', title: 'Wächter-Brecher', desc: 'Vernichte die Twin Guardians Flotte.' },
+      coin_500: { id: 'coin_500', icon: '🪙', title: 'Schatzsucher', desc: 'Sammle insgesamt mindestens 500 Credits.' },
+      veteran_win: { id: 'veteran_win', icon: '🎖️', title: 'Kriegsveteran', desc: 'Erreiche Welle 6 auf Schwierigkeit Veteran.' },
+      ultra_survivor: { id: 'ultra_survivor', icon: '🔥', title: 'Alptraum-Bezwinger', desc: 'Überlebe Welle 5 auf Schwierigkeit Alptraum.' },
+      weapon_max: { id: 'weapon_max', icon: '🌈', title: 'Hyper-Bewaffnet', desc: 'Erreiche im Kampf Laser-Upgrade Stufe 5.' },
+      bomb_wipe: { id: 'bomb_wipe', icon: '💥', title: 'Säuberungsschlag', desc: 'Zünde eine Mega-Bombe im Gefecht.' }
+    };
+
+    // --- SOUND ENGINE (Web Audio API Synthesizer) ---
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.volume = 0.8;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+      }
+
+      playLaser(level = 1) {
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = level > 3 ? 'sawtooth' : 'triangle';
+          const now = this.ctx.currentTime;
+          osc.frequency.setValueAtTime(850 + level * 80, now);
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.11);
+          gain.gain.setValueAtTime(0.16 * this.volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } catch (e) {}
+      }
+
+      playEnemyLaser() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          const now = this.ctx.currentTime;
+          osc.frequency.setValueAtTime(460, now);
+          osc.frequency.exponentialRampToValueAtTime(180, now + 0.13);
+          gain.gain.setValueAtTime(0.08 * this.volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.14);
+        } catch (e) {}
+      }
+
+      playExplosion(isBig = false) {
+        if (this.muted || !this.ctx) return;
+        try {
+          const dur = isBig ? 0.65 : 0.28;
+          const bufferSize = this.ctx.sampleRate * dur;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-3 * i / bufferSize);
+          }
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(isBig ? 450 : 800, this.ctx.currentTime);
+          filter.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + dur);
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime((isBig ? 0.45 : 0.22) * this.volume, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          noise.start();
+        } catch (e) {}
+      }
+
+      playCoinSound() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          const now = this.ctx.currentTime;
+          osc.frequency.setValueAtTime(987.77, now);
+          osc.frequency.setValueAtTime(1318.51, now + 0.06);
+          gain.gain.setValueAtTime(0.12 * this.volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.16);
+        } catch (e) {}
+      }
+
+      playPowerup(type) {
+        if (this.muted || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const freqs = type === 'B' ? [300, 450, 600, 900] : [440, 554, 659, 880];
+          freqs.forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now + idx * 0.05);
+            gain.gain.setValueAtTime(0.14 * this.volume, now + idx * 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.14);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.05);
+            osc.stop(now + idx * 0.05 + 0.15);
+          });
+        } catch (e) {}
+      }
+
+      playLaserCharge() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          const now = this.ctx.currentTime;
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.exponentialRampToValueAtTime(900, now + 0.8);
+          gain.gain.setValueAtTime(0.01 * this.volume, now);
+          gain.gain.linearRampToValueAtTime(0.2 * this.volume, now + 0.8);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.86);
+        } catch (e) {}
+      }
+
+      playBossLaserBeam() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          const now = this.ctx.currentTime;
+          osc.frequency.setValueAtTime(140, now);
+          gain.gain.setValueAtTime(0.3 * this.volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.6);
+        } catch (e) {}
+      }
+
+      playShieldHit() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          const now = this.ctx.currentTime;
+          osc.frequency.setValueAtTime(580, now);
+          osc.frequency.exponentialRampToValueAtTime(220, now + 0.2);
+          gain.gain.setValueAtTime(0.18 * this.volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } catch (e) {}
+      }
+
+      playBombBlast() {
+        if (this.muted || !this.ctx) return;
+        this.playExplosion(true);
+      }
+
+      playBossAlert() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          for (let i = 0; i < 3; i++) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'square';
+            const t = now + i * 0.26;
+            osc.frequency.setValueAtTime(440, t);
+            osc.frequency.setValueAtTime(300, t + 0.13);
+            gain.gain.setValueAtTime(0.18 * this.volume, t);
+            gain.gain.linearRampToValueAtTime(0.001, t + 0.24);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.25);
+          }
+        } catch (e) {}
+      }
+
+      playAchievement() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          [523.25, 659.25, 783.99, 1046.50].forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.18 * this.volume, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.2);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.22);
+          });
+        } catch (e) {}
+      }
+    }
+
+    // --- SAVE & PERSISTENCE MANAGER ---
+    class SaveManager {
+      constructor() {
+        this.storageKey = 'galaxy_attack_save_v2';
+        this.profile = this.getDefaultProfile();
+        this.load();
+      }
+
+      getDefaultProfile() {
+        return {
+          version: 2,
+          coins: 0,
+          totalCoinsEarned: 0,
+          upgrades: {
+            fireRate: 0,
+            damage: 0,
+            health: 0,
+            speed: 0,
+            shieldBattery: 0,
+            magnetRewards: 0,
+            bombs: 0
+          },
+          achievements: {},
+          stats: {
+            totalGames: 0,
+            totalVictories: 0,
+            totalDefeats: 0,
+            totalKills: 0,
+            totalBossesKilled: 0,
+            totalPlaytimeSec: 0,
+            bestSurvivalTimeSec: 0,
+            bestScore: { EASY: 0, MEDIUM: 0, HARD: 0, ULTRA: 0 },
+            overallBestScore: 0,
+            highestWave: 1
+          },
+          settings: {
+            soundVolume: 0.8,
+            soundMuted: false,
+            screenShake: true,
+            flashEffects: true
+          }
+        };
+      }
+
+      load() {
+        try {
+          const raw = localStorage.getItem(this.storageKey);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+              this.profile = this.mergeWithDefaults(parsed);
+              return;
+            }
+          }
+          const legacyHi = localStorage.getItem('galaxy_shooter_hi');
+          if (legacyHi) {
+            const score = parseInt(legacyHi, 10) || 0;
+            this.profile.stats.bestScore.MEDIUM = score;
+            this.profile.stats.overallBestScore = score;
+            this.save();
+          }
+        } catch (e) {
+          console.warn("Failed to load save profile, using fresh default.", e);
+          this.profile = this.getDefaultProfile();
+        }
+      }
+
+      mergeWithDefaults(saved) {
+        const def = this.getDefaultProfile();
+        return {
+          ...def,
+          ...saved,
+          upgrades: { ...def.upgrades, ...(saved.upgrades || {}) },
+          achievements: { ...(saved.achievements || {}) },
+          stats: {
+            ...def.stats,
+            ...(saved.stats || {}),
+            bestScore: { ...def.stats.bestScore, ...((saved.stats && saved.stats.bestScore) || {}) }
+          },
+          settings: { ...def.settings, ...(saved.settings || {}) }
+        };
+      }
+
+      save() {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.profile));
+        } catch (e) {
+          console.error("Failed to save progress to localStorage", e);
+        }
+      }
+
+      reset() {
+        this.profile = this.getDefaultProfile();
+        try {
+          localStorage.removeItem(this.storageKey);
+          localStorage.removeItem('galaxy_shooter_hi');
+        } catch (e) {}
+        this.save();
+      }
+
+      unlockAchievement(id) {
+        if (!this.profile.achievements[id]) {
+          this.profile.achievements[id] = true;
+          this.save();
+          return true;
+        }
+        return false;
+      }
+    }
+
+    // --- GAME ENGINE CONSTANTS ---
+    const WIDTH = 760;
+    const HEIGHT = 1000;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const sound = new SoundEngine();
+    const saveMgr = new SaveManager();
+
+    // Mini Ship SVG string for lives
+    const SHIP_SVG = `
+      <svg class="life-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L4 18L12 14L20 18L12 2Z" fill="#00f0ff" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M12 14V22" stroke="#ff007f" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    `;
+
+    // --- PARTICLE CLASS ---
+    class Particle {
+      constructor(x, y, vx, vy, color, size, life, shape = 'circle') {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.size = size;
+        this.maxLife = life;
+        this.life = life;
+        this.shape = shape;
+        this.alpha = 1;
+      }
+
+      update(dt) {
+        this.x += this.vx * dt * 60;
+        this.y += this.vy * dt * 60;
+        this.vx *= 0.96;
+        this.vy *= 0.96;
+        this.life -= dt * 60;
+        this.alpha = Math.max(0, this.life / this.maxLife);
+        return this.life > 0;
+      }
+
+      draw(c) {
+        c.save();
+        c.globalAlpha = this.alpha;
+        c.fillStyle = this.color;
+        c.shadowColor = this.color;
+        c.shadowBlur = 8;
+        if (this.shape === 'circle') {
+          c.beginPath();
+          c.arc(this.x, this.y, this.size * (0.4 + 0.6 * this.alpha), 0, Math.PI * 2);
+          c.fill();
+        } else if (this.shape === 'spark') {
+          c.beginPath();
+          c.moveTo(this.x, this.y);
+          c.lineTo(this.x - this.vx * 3, this.y - this.vy * 3);
+          c.strokeStyle = this.color;
+          c.lineWidth = this.size;
+          c.stroke();
+        }
+        c.restore();
+      }
+    }
+
+    // --- COIN PICKUP CLASS ---
+    class CoinPickup {
+      constructor(x, y, value = 1) {
+        this.x = x;
+        this.y = y;
+        this.value = value;
+        this.vx = (Math.random() - 0.5) * 3;
+        this.vy = -2 - Math.random() * 2;
+        this.radius = 11;
+        this.age = 0;
+        this.markedForRemoval = false;
+      }
+
+      update(dt, player, magnetBonus = 1) {
+        this.age += dt * 60;
+        this.x += this.vx * dt * 60;
+        this.y += this.vy * dt * 60;
+        this.vy += 0.15 * dt * 60;
+
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        const magnetRange = 130 * magnetBonus;
+
+        if (dist < magnetRange) {
+          const pullSpeed = 7 + (1 - dist / magnetRange) * 8;
+          this.x += (dx / dist) * pullSpeed * dt * 60;
+          this.y += (dy / dist) * pullSpeed * dt * 60;
+        }
+
+        if (this.y > HEIGHT + 40) {
+          this.markedForRemoval = true;
+        }
+      }
+
+      draw(c) {
+        c.save();
+        c.translate(this.x, this.y);
+        const spin = Math.cos(this.age * 0.15);
+        c.scale(spin, 1);
+
+        c.shadowColor = '#ffe600';
+        c.shadowBlur = 10;
+        c.fillStyle = '#ffd700';
+        c.beginPath();
+        c.arc(0, 0, this.radius, 0, Math.PI * 2);
+        c.fill();
+
+        c.strokeStyle = '#fff';
+        c.lineWidth = 1.5;
+        c.stroke();
+        c.restore();
+      }
+    }
+
+    // --- FLOATING TEXT ---
+    class FloatingText {
+      constructor(text, x, y, color = '#ffe600', size = 18) {
+        this.text = text;
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.size = size;
+        this.life = 45;
+        this.maxLife = 45;
+      }
+
+      update(dt) {
+        this.y -= 1.3 * dt * 60;
+        this.life -= dt * 60;
+        return this.life > 0;
+      }
+
+      draw(c) {
+        c.save();
+        c.globalAlpha = Math.max(0, this.life / this.maxLife);
+        c.font = `900 ${this.size}px 'Orbitron', monospace`;
+        c.fillStyle = this.color;
+        c.textAlign = 'center';
+        c.shadowColor = this.color;
+        c.shadowBlur = 10;
+        c.fillText(this.text, this.x, this.y);
+        c.restore();
+      }
+    }
+
+    // --- STARFIELD ---
+    class Starfield {
+      constructor() {
+        this.layers = [
+          { count: 65, speed: 0.5, size: 1.0, alpha: 0.4, stars: [] },
+          { count: 40, speed: 1.4, size: 1.8, alpha: 0.7, stars: [] },
+          { count: 22, speed: 3.5, size: 2.6, alpha: 0.95, stars: [] }
+        ];
+        this.shootingStars = [];
+        this.sectorTheme = 1;
+        this.init();
+      }
+
+      init() {
+        this.layers.forEach(layer => {
+          layer.stars = [];
+          for (let i = 0; i < layer.count; i++) {
+            layer.stars.push({
+              x: Math.random() * WIDTH,
+              y: Math.random() * HEIGHT,
+              twinkle: Math.random() * Math.PI * 2,
+              color: Math.random() > 0.8 ? '#00f0ff' : (Math.random() > 0.85 ? '#ff007f' : '#ffffff')
+            });
+          }
+        });
+      }
+
+      setSector(sec) {
+        this.sectorTheme = sec;
+      }
+
+      update(dt) {
+        this.layers.forEach(layer => {
+          layer.stars.forEach(s => {
+            s.y += layer.speed * dt * 60;
+            s.twinkle += 0.05 * dt * 60;
+            if (s.y > HEIGHT) {
+              s.y = 0;
+              s.x = Math.random() * WIDTH;
+            }
+          });
+        });
+
+        if (Math.random() < 0.008) {
+          this.shootingStars.push({
+            x: Math.random() * WIDTH * 0.8,
+            y: 0,
+            vx: 5 + Math.random() * 5,
+            vy: 9 + Math.random() * 6,
+            len: 50 + Math.random() * 40,
+            alpha: 1
+          });
+        }
+
+        for (let i = this.shootingStars.length - 1; i >= 0; i--) {
+          const ss = this.shootingStars[i];
+          ss.x += ss.vx * dt * 60;
+          ss.y += ss.vy * dt * 60;
+          ss.alpha -= 0.025 * dt * 60;
+          if (ss.alpha <= 0 || ss.y > HEIGHT) {
+            this.shootingStars.splice(i, 1);
+          }
+        }
+      }
+
+      draw(c) {
+        const grad = c.createRadialGradient(WIDTH / 2, HEIGHT / 2, 80, WIDTH / 2, HEIGHT / 2, WIDTH);
+        if (this.sectorTheme === 2) {
+          grad.addColorStop(0, 'rgba(45, 10, 65, 0.35)');
+          grad.addColorStop(0.6, 'rgba(12, 10, 40, 0.2)');
+        } else if (this.sectorTheme === 3) {
+          grad.addColorStop(0, 'rgba(65, 35, 10, 0.35)');
+          grad.addColorStop(0.6, 'rgba(25, 15, 8, 0.2)');
+        } else if (this.sectorTheme === 4) {
+          grad.addColorStop(0, 'rgba(10, 45, 75, 0.35)');
+          grad.addColorStop(0.6, 'rgba(5, 20, 35, 0.2)');
+        } else if (this.sectorTheme === 5) {
+          grad.addColorStop(0, 'rgba(75, 10, 20, 0.45)');
+          grad.addColorStop(0.6, 'rgba(35, 5, 10, 0.25)');
+        } else {
+          grad.addColorStop(0, 'rgba(20, 10, 50, 0.25)');
+          grad.addColorStop(0.6, 'rgba(8, 15, 40, 0.15)');
+        }
+        grad.addColorStop(1, 'rgba(3, 2, 10, 0)');
+        c.fillStyle = grad;
+        c.fillRect(0, 0, WIDTH, HEIGHT);
+
+        this.layers.forEach(layer => {
+          layer.stars.forEach(s => {
+            const currentAlpha = layer.alpha * (0.7 + 0.3 * Math.sin(s.twinkle));
+            c.save();
+            c.globalAlpha = currentAlpha;
+            c.fillStyle = s.color;
+            if (layer.speed > 2) {
+              c.fillRect(s.x, s.y, layer.size, layer.size * 2.8);
+            } else {
+              c.beginPath();
+              c.arc(s.x, s.y, layer.size, 0, Math.PI * 2);
+              c.fill();
+            }
+            c.restore();
+          });
+        });
+
+        this.shootingStars.forEach(ss => {
+          c.save();
+          c.globalAlpha = Math.max(0, ss.alpha);
+          c.strokeStyle = '#00f0ff';
+          c.lineWidth = 2;
+          c.shadowColor = '#00f0ff';
+          c.shadowBlur = 10;
+          c.beginPath();
+          c.moveTo(ss.x, ss.y);
+          c.lineTo(ss.x - ss.vx * 3.5, ss.y - ss.vy * 3.5);
+          c.stroke();
+          c.restore();
+        });
+      }
+    }
+
+    // --- BULLET CLASS WITH HIGH-CONTRAST VISUAL HIERARCHY ---
+    class Bullet {
+      constructor(x, y, vx, vy, isPlayer = true, color = '#00f0ff', damage = 25, radius = 4.5, bulletType = 'laser') {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.isPlayer = isPlayer;
+        this.color = color;
+        this.damage = damage;
+        this.radius = radius;
+        this.bulletType = bulletType; // 'laser', 'orb', 'dart', 'plasma'
+        this.markedForRemoval = false;
+        this.age = 0;
+      }
+
+      update(dt) {
+        this.age += dt * 60;
+        this.x += this.vx * dt * 60;
+        this.y += this.vy * dt * 60;
+        if (this.x < -40 || this.x > WIDTH + 40 || this.y < -50 || this.y > HEIGHT + 50) {
+          this.markedForRemoval = true;
+        }
+      }
+
+      draw(c) {
+        c.save();
+        if (this.isPlayer) {
+          // Elongated Player Laser with Cyan Glow & Pure White Core
+          c.shadowColor = this.color;
+          c.shadowBlur = 12;
+          c.fillStyle = '#ffffff';
+          c.beginPath();
+          c.ellipse(this.x, this.y, this.radius, this.radius * 2.6, 0, 0, Math.PI * 2);
+          c.fill();
+
+          c.strokeStyle = this.color;
+          c.lineWidth = 2;
+          c.stroke();
+        } else {
+          // High-Visibility Enemy Projectile with Directional Trail & High-Contrast Halo
+          c.shadowColor = this.color;
+          c.shadowBlur = 14;
+
+          // Outer Warning Halo
+          c.fillStyle = this.color;
+          c.beginPath();
+          c.arc(this.x, this.y, this.radius + 2, 0, Math.PI * 2);
+          c.fill();
+
+          // Blinding Center Core (Yellow/White)
+          c.fillStyle = '#ffffff';
+          c.beginPath();
+          c.arc(this.x, this.y, this.radius * 0.55, 0, Math.PI * 2);
+          c.fill();
+
+          // Directional Trailing Spark
+          c.strokeStyle = '#ffffff';
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.moveTo(this.x, this.y);
+          c.lineTo(this.x - this.vx * 1.8, this.y - this.vy * 1.8);
+          c.stroke();
+        }
+        c.restore();
+      }
+    }
+
+    // --- POWERUP ITEM CLASS ---
+    class PowerUp {
+      constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type; // 'L': Laser, 'S': Shield, 'B': Bomb, 'H': Heart
+        this.vy = 1.8;
+        this.radius = 18;
+        this.age = 0;
+        this.markedForRemoval = false;
+
+        this.badgeColor = {
+          'L': '#00f0ff',
+          'S': '#39ff14',
+          'B': '#ff2a2a',
+          'H': '#ff007f'
+        }[type] || '#ffe600';
+      }
+
+      update(dt, player, magnetBonus = 1) {
+        this.age += dt * 60;
+        this.y += this.vy * dt * 60;
+        this.x += Math.sin(this.age * 0.08) * 1.2 * dt * 60;
+
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        const magnetDist = 140 * magnetBonus;
+
+        if (dist < magnetDist) {
+          this.x += (dx / dist) * 5 * dt * 60;
+          this.y += (dy / dist) * 5 * dt * 60;
+        }
+
+        if (this.y > HEIGHT + 40) {
+          this.markedForRemoval = true;
+        }
+      }
+
+      draw(c) {
+        c.save();
+        const pulse = 1 + 0.12 * Math.sin(this.age * 0.15);
+        c.translate(this.x, this.y);
+        c.scale(pulse, pulse);
+
+        c.shadowColor = this.badgeColor;
+        c.shadowBlur = 18;
+        c.fillStyle = 'rgba(10, 8, 25, 0.85)';
+        c.beginPath();
+        c.arc(0, 0, this.radius, 0, Math.PI * 2);
+        c.fill();
+
+        c.strokeStyle = this.badgeColor;
+        c.lineWidth = 2.5;
+        c.stroke();
+
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = 1.5;
+        c.beginPath();
+        c.arc(0, 0, this.radius + 3, this.age * 0.08, this.age * 0.08 + 1.2);
+        c.stroke();
+
+        c.font = "900 16px 'Orbitron', monospace";
+        c.fillStyle = this.badgeColor;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(this.type, 0, 1);
+
+        c.restore();
+      }
+    }
+
+    // --- PLAYER SHIP CLASS ---
+    class Player {
+      constructor() {
+        this.width = 54;
+        this.height = 58;
+        this.x = WIDTH / 2;
+        this.y = HEIGHT - 120;
+        this.baseSpeed = 9.5;
+        this.speed = this.baseSpeed;
+        this.lives = 3;
+        this.maxLives = BALANCE_CONFIG.player.maxLivesHardCap;
+        this.weaponLevel = 1;
+        this.maxWeaponLevel = 5;
+        this.hasShield = false;
+        this.shieldRechargeTimer = 0;
+        this.canRechargeShield = false;
+        this.bombs = 2;
+        this.invulnerableTimer = 0;
+        this.shootTimer = 0;
+        this.roll = 0;
+        this.damageMultiplier = 1.0;
+        this.fireInterval = 10;
+        this.magnetBonus = 1.0;
+        this.isDying = false;
+      }
+
+      initFromUpgrades(diffConfig, upgrades) {
+        this.x = WIDTH / 2;
+        this.y = HEIGHT - 120;
+        this.weaponLevel = 1;
+        this.invulnerableTimer = BALANCE_CONFIG.player.respawnInvulnerableTime;
+        this.isDying = false;
+
+        // Apply health with strict hard cap of 5 lives
+        const extraLives = (upgrades.health || 0) + (diffConfig.playerLifeBonus || 0);
+        this.lives = Math.min(BALANCE_CONFIG.player.maxLivesHardCap, BALANCE_CONFIG.player.baseLives + extraLives);
+        this.bombs = Math.min(BALANCE_CONFIG.player.maxBombCapacity, BALANCE_CONFIG.player.baseBombCapacity + (upgrades.bombs || 0));
+
+        // Speed
+        const speedLvl = upgrades.speed || 0;
+        this.speed = this.baseSpeed * (1 + speedLvl * 0.1);
+
+        // Damage multiplier
+        const dmgLvl = upgrades.damage || 0;
+        this.damageMultiplier = 1 + dmgLvl * 0.15;
+
+        // Fire rate interval reduction
+        const fireLvl = upgrades.fireRate || 0;
+        this.fireRateReduction = fireLvl * 0.06;
+
+        // Magnet bonus
+        const magLvl = upgrades.magnetRewards || 0;
+        this.magnetBonus = 1 + magLvl * 0.25;
+
+        // Shield
+        const shieldLvl = upgrades.shieldBattery || 0;
+        this.hasShield = shieldLvl > 0;
+        this.canRechargeShield = shieldLvl >= 3;
+        this.shieldRechargeTimer = 0;
+      }
+
+      respawn() {
+        this.x = WIDTH / 2;
+        this.y = HEIGHT - 120;
+        this.invulnerableTimer = BALANCE_CONFIG.player.respawnInvulnerableTime;
+        this.weaponLevel = Math.max(1, this.weaponLevel - 1);
+        this.isDying = false;
+      }
+
+      hit() {
+        if (this.invulnerableTimer > 0 || this.isDying) return false;
+
+        if (this.hasShield) {
+          this.hasShield = false;
+          this.invulnerableTimer = 45;
+          sound.playShieldHit();
+          game.spawnShockwave(this.x, this.y, '#39ff14', 65);
+          game.floatingTexts.push(new FloatingText("SCHILD VERLOREN!", this.x, this.y - 30, '#39ff14', 16));
+          return false;
+        }
+
+        // Strictly consume exactly 1 life
+        this.lives--;
+        sound.playExplosion(true);
+        game.triggerScreenShake(20);
+        game.spawnExplosion(this.x, this.y, '#00f0ff', 60);
+
+        if (this.lives > 0) {
+          this.respawn();
+          game.floatingTexts.push(new FloatingText("RESPAWN!", this.x, this.y - 35, '#ff007f', 18));
+          return false;
+        } else {
+          // Zero lives left: start clean death sequence
+          this.isDying = true;
+          this.invulnerableTimer = 99999; // Ignore further hits
+          return true; // Indicates player is dead
+        }
+      }
+
+      update(dt, input) {
+        if (this.isDying) return;
+
+        let moveX = 0;
+        let moveY = 0;
+
+        if (input.keys['KeyA'] || input.keys['ArrowLeft']) moveX -= 1;
+        if (input.keys['KeyD'] || input.keys['ArrowRight']) moveX += 1;
+        if (input.keys['KeyW'] || input.keys['ArrowUp']) moveY -= 1;
+        if (input.keys['KeyS'] || input.keys['ArrowDown']) moveY += 1;
+
+        if (moveX !== 0 || moveY !== 0) {
+          const len = Math.hypot(moveX, moveY);
+          this.x += (moveX / len) * this.speed * dt * 60;
+          this.y += (moveY / len) * this.speed * dt * 60;
+        } else if (input.mouseActive) {
+          const dx = input.mouseX - this.x;
+          const dy = input.mouseY - this.y;
+          this.x += dx * 0.22 * dt * 60;
+          this.y += dy * 0.22 * dt * 60;
+        }
+
+        this.x = Math.max(30, Math.min(WIDTH - 30, this.x));
+        this.y = Math.max(120, Math.min(HEIGHT - 40, this.y));
+
+        const targetRoll = (input.mouseActive ? (input.mouseX - this.x) * 0.025 : moveX * 0.35);
+        this.roll += (targetRoll - this.roll) * 0.2;
+
+        if (this.invulnerableTimer > 0) {
+          this.invulnerableTimer -= dt * 60;
+        }
+
+        // Shield Recharge passive
+        if (!this.hasShield && this.canRechargeShield) {
+          this.shieldRechargeTimer += dt * 60;
+          if (this.shieldRechargeTimer >= 3600) {
+            this.hasShield = true;
+            this.shieldRechargeTimer = 0;
+            sound.playPowerup('S');
+            game.floatingTexts.push(new FloatingText("SCHILD REGENERIERT!", this.x, this.y - 35, '#39ff14', 18));
+          }
+        }
+
+        // Engine Particles
+        if (Math.random() < 0.85) {
+          game.particles.push(new Particle(
+            this.x + (Math.random() * 8 - 4),
+            this.y + 24,
+            (Math.random() - 0.5) * 1.5,
+            3.5 + Math.random() * 4,
+            Math.random() > 0.4 ? '#00f0ff' : '#ff007f',
+            3,
+            20,
+            'circle'
+          ));
+        }
+
+        // Shooting
+        this.shootTimer += dt * 60;
+        const baseInterval = Math.max(5.5, 11 - this.weaponLevel);
+        const effectiveInterval = baseInterval * (1 - (this.fireRateReduction || 0));
+        const shouldShoot = input.autoFire || input.keys['Space'] || input.isMouseDown;
+
+        if (shouldShoot && this.shootTimer >= effectiveInterval) {
+          this.shoot();
+          this.shootTimer = 0;
+        }
+      }
+
+      shoot() {
+        sound.playLaser(this.weaponLevel);
+        const lvl = this.weaponLevel;
+        const y = this.y - 20;
+        const dmgMult = this.damageMultiplier;
+
+        if (lvl === 1) {
+          game.bullets.push(new Bullet(this.x, y, 0, -22, true, '#00f0ff', 35 * dmgMult, 4.5));
+        } else if (lvl === 2) {
+          game.bullets.push(new Bullet(this.x - 12, y, 0, -23, true, '#00f0ff', 28 * dmgMult, 4));
+          game.bullets.push(new Bullet(this.x + 12, y, 0, -23, true, '#00f0ff', 28 * dmgMult, 4));
+        } else if (lvl === 3) {
+          game.bullets.push(new Bullet(this.x, y - 4, 0, -24, true, '#ffe600', 30 * dmgMult, 4.5));
+          game.bullets.push(new Bullet(this.x - 15, y, -2.8, -22, true, '#00f0ff', 25 * dmgMult, 4));
+          game.bullets.push(new Bullet(this.x + 15, y, 2.8, -22, true, '#00f0ff', 25 * dmgMult, 4));
+        } else if (lvl === 4) {
+          game.bullets.push(new Bullet(this.x - 8, y, -0.8, -24, true, '#00f0ff', 28 * dmgMult, 4));
+          game.bullets.push(new Bullet(this.x + 8, y, 0.8, -24, true, '#00f0ff', 28 * dmgMult, 4));
+          game.bullets.push(new Bullet(this.x - 22, y + 4, -4.2, -22, true, '#ff007f', 24 * dmgMult, 3.5));
+          game.bullets.push(new Bullet(this.x + 22, y + 4, 4.2, -22, true, '#ff007f', 24 * dmgMult, 3.5));
+        } else {
+          game.bullets.push(new Bullet(this.x, y - 6, 0, -26, true, '#ffffff', 44 * dmgMult, 6));
+          game.bullets.push(new Bullet(this.x - 12, y, -1.5, -24, true, '#00f0ff', 32 * dmgMult, 4.5));
+          game.bullets.push(new Bullet(this.x + 12, y, 1.5, -24, true, '#00f0ff', 32 * dmgMult, 4.5));
+          game.bullets.push(new Bullet(this.x - 26, y + 6, -5.5, -21, true, '#ffe600', 28 * dmgMult, 4));
+          game.bullets.push(new Bullet(this.x + 26, y + 6, 5.5, -21, true, '#ffe600', 28 * dmgMult, 4));
+          game.checkAchievement('weapon_max');
+        }
+      }
+
+      draw(c) {
+        if (this.isDying) return;
+        if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer / 4) % 2 === 0) {
+          return;
+        }
+
+        c.save();
+        c.translate(this.x, this.y);
+        c.rotate(this.roll);
+
+        c.shadowColor = '#00f0ff';
+        c.shadowBlur = 15;
+
+        // Ship hull
+        c.fillStyle = '#0f172a';
+        c.strokeStyle = '#00f0ff';
+        c.lineWidth = 2.5;
+
+        c.beginPath();
+        c.moveTo(0, -28);
+        c.lineTo(14, -6);
+        c.lineTo(28, 12);
+        c.lineTo(18, 22);
+        c.lineTo(8, 16);
+        c.lineTo(0, 24);
+        c.lineTo(-8, 16);
+        c.lineTo(-18, 22);
+        c.lineTo(-28, 12);
+        c.lineTo(-14, -6);
+        c.closePath();
+        c.fill();
+        c.stroke();
+
+        // Hull plating
+        c.fillStyle = '#1e293b';
+        c.beginPath();
+        c.moveTo(0, -22);
+        c.lineTo(8, 0);
+        c.lineTo(12, 14);
+        c.lineTo(0, 18);
+        c.lineTo(-12, 14);
+        c.lineTo(-8, 0);
+        c.closePath();
+        c.fill();
+
+        // Canopy
+        c.fillStyle = '#00f0ff';
+        c.beginPath();
+        c.ellipse(0, -4, 4.5, 11, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Wingtip guns
+        c.fillStyle = '#ff007f';
+        c.fillRect(-27, 2, 3, 10);
+        c.fillRect(24, 2, 3, 10);
+
+        // Thruster plume
+        const plumeLen = 14 + Math.random() * 8;
+        const grad = c.createLinearGradient(0, 20, 0, 20 + plumeLen);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, '#00f0ff');
+        grad.addColorStop(1, 'transparent');
+        c.fillStyle = grad;
+        c.beginPath();
+        c.moveTo(-6, 20);
+        c.lineTo(0, 20 + plumeLen);
+        c.lineTo(6, 20);
+        c.closePath();
+        c.fill();
+
+        // Shield Forcefield
+        if (this.hasShield) {
+          c.restore();
+          c.save();
+          c.translate(this.x, this.y);
+          c.shadowColor = '#39ff14';
+          c.shadowBlur = 24;
+          c.strokeStyle = '#39ff14';
+          c.lineWidth = 3;
+
+          const time = Date.now() * 0.005;
+          c.beginPath();
+          c.arc(0, 0, 42, 0, Math.PI * 2);
+          c.stroke();
+
+          c.fillStyle = 'rgba(57, 255, 20, 0.12)';
+          c.fill();
+
+          c.lineWidth = 2;
+          c.strokeStyle = '#ffffff';
+          c.beginPath();
+          c.arc(0, 0, 44, time, time + 1.2);
+          c.stroke();
+          c.beginPath();
+          c.arc(0, 0, 44, time + Math.PI, time + Math.PI + 1.2);
+          c.stroke();
+        }
+
+        c.restore();
+      }
+    }
+
+    // --- ENEMY CLASSES WITH VISUAL ATTACK TELEGRAPHS ---
+    class Enemy {
+      constructor(type, x, y, wave, diffConfig) {
+        this.type = type; // 'interceptor', 'cruiser', 'kamikaze', 'phantom'
+        this.x = x;
+        this.y = y;
+        this.wave = wave;
+        this.diff = diffConfig;
+        this.age = 0;
+        this.markedForRemoval = false;
+        this.lastShot = 0;
+
+        const hpScale = diffConfig.enemyHpMult;
+        const spdScale = diffConfig.bulletSpeedMult;
+
+        if (type === 'interceptor') {
+          this.radius = 18;
+          this.hp = (32 + wave * 9) * hpScale;
+          this.maxHp = this.hp;
+          this.score = 100;
+          this.coinReward = 2;
+          this.shootCooldown = (130 + Math.random() * 50) / spdScale;
+          this.color = '#ff007f';
+          this.baseX = x;
+        } else if (type === 'cruiser') {
+          this.radius = 26;
+          this.hp = (110 + wave * 25) * hpScale;
+          this.maxHp = this.hp;
+          this.score = 250;
+          this.coinReward = 5;
+          this.shootCooldown = (95 + Math.random() * 40) / spdScale;
+          this.color = '#a855f7';
+          this.isAiming = false;
+          this.aimTimer = 0;
+        } else if (type === 'kamikaze') {
+          this.radius = 16;
+          this.hp = (30 + wave * 7) * hpScale;
+          this.maxHp = this.hp;
+          this.score = 160;
+          this.coinReward = 3;
+          this.shootCooldown = 99999;
+          this.color = '#39ff14';
+          this.charging = false;
+          this.diveAngle = 0;
+        } else if (type === 'phantom') {
+          this.radius = 22;
+          this.hp = (70 + wave * 16) * hpScale;
+          this.maxHp = this.hp;
+          this.score = 220;
+          this.coinReward = 4;
+          this.shootCooldown = (110 + Math.random() * 40) / spdScale;
+          this.color = '#00f0ff';
+          this.strafeDir = Math.random() > 0.5 ? 1 : -1;
+        }
+      }
+
+      update(dt, player) {
+        this.age += dt * 60;
+
+        if (this.type === 'interceptor') {
+          this.y += 1.8 * dt * 60;
+          this.x = this.baseX + Math.sin(this.age * 0.05) * 65;
+        } else if (this.type === 'cruiser') {
+          this.y += 1.1 * dt * 60;
+          this.x += Math.cos(this.age * 0.03) * 1.5 * dt * 60;
+        } else if (this.type === 'kamikaze') {
+          if (!this.charging) {
+            this.y += 2.2 * dt * 60;
+            if (this.y > 180 && Math.abs(player.x - this.x) < 220) {
+              this.charging = true;
+              this.diveAngle = Math.atan2(player.y - this.y, player.x - this.x);
+            }
+          } else {
+            const diveSpeed = 7.5 * this.diff.bulletSpeedMult;
+            this.x += Math.cos(this.diveAngle) * diveSpeed * dt * 60;
+            this.y += Math.sin(this.diveAngle) * diveSpeed * dt * 60;
+          }
+        } else if (this.type === 'phantom') {
+          this.y += 1.4 * dt * 60;
+          this.x += this.strafeDir * 2.8 * dt * 60;
+          if (this.x < 40 || this.x > WIDTH - 40) this.strafeDir *= -1;
+        }
+
+        // Shooting with telegraph for heavy enemies
+        this.lastShot += dt * 60;
+        if (this.type === 'cruiser') {
+          // Cruiser pre-aiming warning line
+          if (this.lastShot >= this.shootCooldown - 25 && this.y > 40 && this.y < HEIGHT - 150) {
+            this.isAiming = true;
+          }
+        }
+
+        if (this.lastShot >= this.shootCooldown && this.y > 40 && this.y < HEIGHT - 150) {
+          this.shoot(player);
+          this.lastShot = 0;
+          this.isAiming = false;
+        }
+
+        if (this.y > HEIGHT + 60 || this.x < -60 || this.x > WIDTH + 60) {
+          this.markedForRemoval = true;
+        }
+      }
+
+      shoot(player) {
+        const bSpeed = 7.2 * this.diff.bulletSpeedMult;
+        if (this.type === 'interceptor') {
+          sound.playEnemyLaser();
+          game.bullets.push(new Bullet(this.x, this.y + 16, 0, bSpeed, false, '#ff0055', 15 * this.diff.enemyDmgMult, 4, 'dart'));
+        } else if (this.type === 'cruiser') {
+          sound.playEnemyLaser();
+          const angle = Math.atan2(player.y - this.y, player.x - this.x);
+          game.bullets.push(new Bullet(this.x, this.y + 20, Math.cos(angle) * bSpeed, Math.sin(angle) * bSpeed, false, '#ffaa00', 22 * this.diff.enemyDmgMult, 5.5, 'orb'));
+        } else if (this.type === 'phantom') {
+          sound.playEnemyLaser();
+          [-0.2, 0.2].forEach(offset => {
+            const angle = Math.atan2(player.y - this.y, player.x - this.x) + offset;
+            game.bullets.push(new Bullet(this.x, this.y + 16, Math.cos(angle) * bSpeed * 0.95, Math.sin(angle) * bSpeed * 0.95, false, '#00ff99', 16 * this.diff.enemyDmgMult, 4.5, 'plasma'));
+          });
+        }
+      }
+
+      draw(c) {
+        c.save();
+
+        // Draw Aiming Telegraph for Cruiser
+        if (this.type === 'cruiser' && this.isAiming && game.player) {
+          c.save();
+          c.strokeStyle = 'rgba(255, 170, 0, 0.45)';
+          c.lineWidth = 1.5;
+          c.setLineDash([6, 6]);
+          c.beginPath();
+          c.moveTo(this.x, this.y + 20);
+          c.lineTo(game.player.x, game.player.y);
+          c.stroke();
+          c.restore();
+        }
+
+        c.translate(this.x, this.y);
+        c.shadowColor = this.color;
+        c.shadowBlur = 12;
+
+        if (this.type === 'interceptor') {
+          c.fillStyle = '#1e1026';
+          c.strokeStyle = this.color;
+          c.lineWidth = 2;
+          c.beginPath();
+          c.moveTo(0, 18);
+          c.lineTo(16, -12);
+          c.lineTo(6, -6);
+          c.lineTo(0, -14);
+          c.lineTo(-6, -6);
+          c.lineTo(-16, -12);
+          c.closePath();
+          c.fill();
+          c.stroke();
+          c.fillStyle = '#ff2a2a';
+          c.beginPath();
+          c.arc(0, 0, 4, 0, Math.PI * 2);
+          c.fill();
+        } else if (this.type === 'cruiser') {
+          c.fillStyle = '#170f2e';
+          c.strokeStyle = this.color;
+          c.lineWidth = 2.5;
+          c.beginPath();
+          c.moveTo(0, 24);
+          c.lineTo(24, 6);
+          c.lineTo(20, -18);
+          c.lineTo(8, -12);
+          c.lineTo(0, -22);
+          c.lineTo(-8, -12);
+          c.lineTo(-20, -18);
+          c.lineTo(-24, 6);
+          c.closePath();
+          c.fill();
+          c.stroke();
+          c.fillStyle = '#ffe600';
+          c.fillRect(-14, 12, 3, 8);
+          c.fillRect(11, 12, 3, 8);
+        } else if (this.type === 'kamikaze') {
+          if (this.charging) c.rotate(this.diveAngle - Math.PI / 2);
+          c.fillStyle = '#082310';
+          c.strokeStyle = this.color;
+          c.lineWidth = 2;
+          c.beginPath();
+          c.moveTo(0, 16);
+          c.lineTo(14, -12);
+          c.lineTo(0, -6);
+          c.lineTo(-14, -12);
+          c.closePath();
+          c.fill();
+          c.stroke();
+          c.fillStyle = '#ffe600';
+          c.beginPath();
+          c.arc(0, -9, 3.5, 0, Math.PI * 2);
+          c.fill();
+        } else if (this.type === 'phantom') {
+          c.fillStyle = '#0a1d2e';
+          c.strokeStyle = this.color;
+          c.lineWidth = 2;
+          c.beginPath();
+          c.moveTo(0, 16);
+          c.lineTo(18, -4);
+          c.lineTo(14, -16);
+          c.lineTo(0, -10);
+          c.lineTo(-14, -16);
+          c.lineTo(-18, -4);
+          c.closePath();
+          c.fill();
+          c.stroke();
+        }
+
+        // Mini HP Bar
+        if (this.hp < this.maxHp) {
+          const barW = 28;
+          c.fillStyle = 'rgba(0,0,0,0.6)';
+          c.fillRect(-barW / 2, -this.radius - 10, barW, 4);
+          c.fillStyle = '#39ff14';
+          c.fillRect(-barW / 2, -this.radius - 10, barW * (this.hp / this.maxHp), 4);
+        }
+
+        c.restore();
+      }
+    }
+
+    // --- REDESIGNED BOSS 1: THE LASER SENTINEL ---
+    class BossLaserSentinel {
+      constructor(wave, diffConfig) {
+        this.bossId = 'sentinel';
+        this.wave = wave;
+        this.diff = diffConfig;
+        this.name = 'LASER SENTINEL';
+        this.x = WIDTH / 2;
+        this.y = -160;
+        this.targetY = 160;
+        this.radius = 70;
+
+        // Balanced HP scaling
+        const base = BALANCE_CONFIG.bosses.sentinel.baseHp + (wave - 5) * BALANCE_CONFIG.bosses.sentinel.hpPerWave;
+        this.maxHp = base * diffConfig.enemyHpMult;
+        this.hp = this.maxHp;
+
+        this.age = 0;
+        this.isDeploying = true; // Invulnerable until in arena!
+        this.markedForRemoval = false;
+        this.isDying = false;
+        this.deathTimer = 0;
+
+        // Telegraph & Attack State
+        this.attackState = 'IDLE'; // 'IDLE', 'TELEGRAPH_CORE', 'FIRING_CORE', 'SWEEPING'
+        this.stateTimer = 0;
+        this.coreLaserTargetX = WIDTH / 2;
+        this.sweepAngle = 0;
+        this.attackCooldown = 0;
+
+        sound.playBossAlert();
+      }
+
+      update(dt, player) {
+        this.age += dt * 60;
+
+        if (this.isDying) {
+          this.deathTimer += dt * 60;
+          if (Math.random() < 0.4) {
+            const rx = this.x + (Math.random() * 120 - 60);
+            const ry = this.y + (Math.random() * 80 - 40);
+            game.spawnExplosion(rx, ry, Math.random() > 0.5 ? '#ff2a2a' : '#00f0ff', 30);
+            sound.playExplosion(false);
+          }
+          if (this.deathTimer > 95) {
+            game.spawnExplosion(this.x, this.y, '#00f0ff', 120);
+            sound.playExplosion(true);
+            game.triggerScreenShake(30);
+            this.markedForRemoval = true;
+          }
+          return;
+        }
+
+        // Entrance slide
+        if (this.y < this.targetY) {
+          this.y += 1.6 * dt * 60;
+          this.isDeploying = true;
+          return;
+        } else {
+          this.isDeploying = false;
+        }
+
+        // Hover Movement
+        this.x = WIDTH / 2 + Math.sin(this.age * 0.03) * 150;
+        this.y = this.targetY + Math.cos(this.age * 0.05) * 18;
+
+        const hpRatio = this.hp / this.maxHp;
+        const isOverload = hpRatio < 0.35;
+        const telegraphDuration = (isOverload ? 40 : 60) * this.diff.bossTelegraphMult;
+
+        this.attackCooldown += dt * 60;
+
+        // Attack State Machine
+        if (this.attackState === 'IDLE') {
+          if (this.attackCooldown >= (isOverload ? 75 : 110)) {
+            this.attackCooldown = 0;
+            const pick = Math.random();
+            if (pick < 0.55) {
+              this.attackState = 'TELEGRAPH_CORE';
+              this.stateTimer = 0;
+              this.coreLaserTargetX = player.x;
+              sound.playLaserCharge();
+            } else {
+              this.attackState = 'SWEEPING';
+              this.stateTimer = 0;
+              this.sweepAngle = -Math.PI * 0.35;
+            }
+          } else if (Math.random() < (isOverload ? 0.07 : 0.04)) {
+            sound.playEnemyLaser();
+            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+            const spd = 6.5 * this.diff.bulletSpeedMult;
+            game.bullets.push(new Bullet(this.x, this.y + 35, Math.cos(angle) * spd, Math.sin(angle) * spd, false, '#ff007f', 18 * this.diff.enemyDmgMult, 5, 'orb'));
+          }
+        } else if (this.attackState === 'TELEGRAPH_CORE') {
+          this.stateTimer += dt * 60;
+          this.coreLaserTargetX += (player.x - this.coreLaserTargetX) * 0.03 * dt * 60;
+
+          if (this.stateTimer >= telegraphDuration) {
+            this.attackState = 'FIRING_CORE';
+            this.stateTimer = 0;
+            sound.playBossLaserBeam();
+            game.triggerScreenShake(14);
+          }
+        } else if (this.attackState === 'FIRING_CORE') {
+          this.stateTimer += dt * 60;
+          const laserDuration = 45;
+          const beamWidth = BALANCE_CONFIG.bosses.sentinel.laserBeamWidth;
+
+          if (Math.abs(player.x - this.coreLaserTargetX) < beamWidth / 2 + 15 && player.y > this.y + 30) {
+            player.hit();
+          }
+
+          if (this.stateTimer >= laserDuration) {
+            this.attackState = 'IDLE';
+            this.stateTimer = 0;
+          }
+        } else if (this.attackState === 'SWEEPING') {
+          this.stateTimer += dt * 60;
+          this.sweepAngle += BALANCE_CONFIG.bosses.sentinel.sweepLaserSpeed * (isOverload ? 1.3 : 1.0) * dt * 60;
+
+          if (Math.floor(this.stateTimer) % 6 === 0) {
+            sound.playEnemyLaser();
+            const spd = 7 * this.diff.bulletSpeedMult;
+            const vx = Math.sin(this.sweepAngle) * spd;
+            const vy = Math.cos(this.sweepAngle) * spd;
+            game.bullets.push(new Bullet(this.x, this.y + 35, vx, vy, false, '#00f0ff', 16 * this.diff.enemyDmgMult, 4.5, 'dart'));
+          }
+
+          if (this.sweepAngle > Math.PI * 0.35) {
+            this.attackState = 'IDLE';
+            this.stateTimer = 0;
+          }
+        }
+      }
+
+      hit(damage) {
+        if (this.isDying || this.isDeploying) return;
+        this.hp -= damage;
+        if (this.hp <= 0) {
+          this.hp = 0;
+          this.isDying = true;
+          this.attackState = 'IDLE';
+          game.floatingTexts.push(new FloatingText("SENTINEL ZERSTÖRT!", this.x, this.y, '#00f0ff', 28));
+          game.score += 7500;
+          game.spawnCoins(this.x, this.y, 45);
+          game.spawnGuaranteedBossRewards(this.x, this.y);
+          game.checkAchievement('boss1_slain');
+        }
+      }
+
+      draw(c) {
+        c.save();
+
+        // 1. Telegraph Warning Beam
+        if (this.attackState === 'TELEGRAPH_CORE') {
+          const alpha = 0.3 + 0.35 * Math.sin(this.stateTimer * 0.3);
+          c.save();
+          c.globalAlpha = alpha;
+          c.strokeStyle = '#ff2a2a';
+          c.lineWidth = 4;
+          c.setLineDash([8, 8]);
+          c.beginPath();
+          c.moveTo(this.x, this.y + 35);
+          c.lineTo(this.coreLaserTargetX, HEIGHT);
+          c.stroke();
+
+          c.fillStyle = 'rgba(255, 42, 42, 0.15)';
+          const bw = BALANCE_CONFIG.bosses.sentinel.laserBeamWidth;
+          c.fillRect(this.coreLaserTargetX - bw / 2, this.y + 35, bw, HEIGHT - this.y);
+          c.restore();
+        }
+
+        // 2. Active Core Laser Beam
+        if (this.attackState === 'FIRING_CORE') {
+          c.save();
+          c.shadowColor = '#00f0ff';
+          c.shadowBlur = 25;
+          const bw = BALANCE_CONFIG.bosses.sentinel.laserBeamWidth;
+
+          c.fillStyle = 'rgba(0, 240, 255, 0.65)';
+          c.fillRect(this.coreLaserTargetX - bw / 2, this.y + 35, bw, HEIGHT - this.y);
+
+          c.fillStyle = '#ffffff';
+          c.fillRect(this.coreLaserTargetX - bw / 4, this.y + 35, bw / 2, HEIGHT - this.y);
+          c.restore();
+        }
+
+        // 3. Boss Hull
+        c.translate(this.x, this.y);
+        const hpRatio = this.hp / this.maxHp;
+        const coreColor = hpRatio < 0.35 ? '#ff2a2a' : '#00f0ff';
+        c.shadowColor = coreColor;
+        c.shadowBlur = 24;
+
+        c.fillStyle = '#110b24';
+        c.strokeStyle = coreColor;
+        c.lineWidth = 3.5;
+
+        c.beginPath();
+        c.moveTo(0, 48);
+        c.lineTo(65, -35);
+        c.lineTo(25, -45);
+        c.lineTo(0, -25);
+        c.lineTo(-25, -45);
+        c.lineTo(-65, -35);
+        c.closePath();
+        c.fill();
+        c.stroke();
+
+        // Optics Lens
+        c.fillStyle = coreColor;
+        c.beginPath();
+        c.arc(0, 8, 14 + (this.attackState === 'FIRING_CORE' ? 4 : 0), 0, Math.PI * 2);
+        c.fill();
+
+        c.fillStyle = '#ffffff';
+        c.beginPath();
+        c.arc(0, 8, 5, 0, Math.PI * 2);
+        c.fill();
+
+        // Invulnerable shield glow when deploying
+        if (this.isDeploying) {
+          c.strokeStyle = 'rgba(0, 240, 255, 0.5)';
+          c.lineWidth = 3;
+          c.beginPath();
+          c.arc(0, 0, 75, 0, Math.PI * 2);
+          c.stroke();
+        }
+
+        c.restore();
+      }
+    }
+
+    // --- REDESIGNED BOSS 2: THE TWIN GUARDIANS ---
+    class BossTwinGuardians {
+      constructor(wave, diffConfig) {
+        this.bossId = 'guardians';
+        this.wave = wave;
+        this.diff = diffConfig;
+        this.name = 'THE TWIN GUARDIANS';
+        this.x = WIDTH / 2;
+        this.y = -170;
+        this.targetY = 150;
+        this.radius = 75;
+
+        // Balanced HP scaling
+        const carrierBase = BALANCE_CONFIG.bosses.guardians.carrierBaseHp + (wave - 10) * BALANCE_CONFIG.bosses.guardians.carrierHpPerWave;
+        this.maxHp = carrierBase * diffConfig.enemyHpMult;
+        this.hp = this.maxHp;
+
+        this.age = 0;
+        this.isDeploying = true;
+        this.markedForRemoval = false;
+        this.isDying = false;
+        this.deathTimer = 0;
+        this.shotTimer = 0;
+
+        const helperBase = BALANCE_CONFIG.bosses.guardians.helperBaseHp + (wave - 10) * BALANCE_CONFIG.bosses.guardians.helperHpPerWave;
+
+        // Helper 1: Suppressor (Left)
+        this.helper1 = {
+          name: 'SUPPRESSOR',
+          x: this.x - 90,
+          y: this.y + 20,
+          radius: 30,
+          maxHp: helperBase * diffConfig.enemyHpMult,
+          hp: helperBase * diffConfig.enemyHpMult,
+          alive: true,
+          shootCooldown: 60,
+          timer: 0
+        };
+
+        // Helper 2: Disruptor (Right)
+        this.helper2 = {
+          name: 'DISRUPTOR',
+          x: this.x + 90,
+          y: this.y + 20,
+          radius: 30,
+          maxHp: helperBase * diffConfig.enemyHpMult,
+          hp: helperBase * diffConfig.enemyHpMult,
+          alive: true,
+          shootCooldown: 85,
+          timer: 0
+        };
+
+        sound.playBossAlert();
+      }
+
+      update(dt, player) {
+        this.age += dt * 60;
+
+        if (this.isDying) {
+          this.deathTimer += dt * 60;
+          if (Math.random() < 0.45) {
+            const rx = this.x + (Math.random() * 140 - 70);
+            const ry = this.y + (Math.random() * 90 - 45);
+            game.spawnExplosion(rx, ry, Math.random() > 0.5 ? '#a855f7' : '#ff007f', 30);
+            sound.playExplosion(false);
+          }
+          if (this.deathTimer > 105) {
+            game.spawnExplosion(this.x, this.y, '#a855f7', 130);
+            sound.playExplosion(true);
+            game.triggerScreenShake(30);
+            this.markedForRemoval = true;
+          }
+          return;
+        }
+
+        if (this.y < this.targetY) {
+          this.y += 1.6 * dt * 60;
+          this.isDeploying = true;
+          this.helper1.y = this.y + 20;
+          this.helper2.y = this.y + 20;
+          return;
+        } else {
+          this.isDeploying = false;
+        }
+
+        // Float movement
+        this.x = WIDTH / 2 + Math.sin(this.age * 0.02) * 130;
+        this.y = this.targetY + Math.cos(this.age * 0.04) * 15;
+
+        // Helper 1 Update
+        if (this.helper1.alive) {
+          this.helper1.x = this.x - 85 + Math.sin(this.age * 0.06) * 10;
+          this.helper1.y = this.y + 20 + Math.cos(this.age * 0.06) * 8;
+          this.helper1.timer += dt * 60;
+          if (this.helper1.timer >= this.helper1.shootCooldown / this.diff.bulletSpeedMult) {
+            this.helper1.timer = 0;
+            sound.playEnemyLaser();
+            const angle = Math.atan2(player.y - this.helper1.y, player.x - this.helper1.x);
+            const spd = 7 * this.diff.bulletSpeedMult;
+            game.bullets.push(new Bullet(this.helper1.x, this.helper1.y + 15, Math.cos(angle) * spd, Math.sin(angle) * spd, false, '#00f0ff', 18 * this.diff.enemyDmgMult, 4.5, 'dart'));
+          }
+        }
+
+        // Helper 2 Update
+        if (this.helper2.alive) {
+          this.helper2.x = this.x + 85 - Math.sin(this.age * 0.06) * 10;
+          this.helper2.y = this.y + 20 + Math.cos(this.age * 0.06) * 8;
+          this.helper2.timer += dt * 60;
+          if (this.helper2.timer >= this.helper2.shootCooldown / this.diff.bulletSpeedMult) {
+            this.helper2.timer = 0;
+            sound.playEnemyLaser();
+            [-0.3, 0, 0.3].forEach(offset => {
+              const angle = Math.PI / 2 + offset;
+              const spd = 6.2 * this.diff.bulletSpeedMult;
+              game.bullets.push(new Bullet(this.helper2.x, this.helper2.y + 15, Math.cos(angle) * spd, Math.sin(angle) * spd, false, '#ff007f', 18 * this.diff.enemyDmgMult, 4.5, 'dart'));
+            });
+          }
+        }
+
+        const bothHelpersDead = !this.helper1.alive && !this.helper2.alive;
+        this.shotTimer += dt * 60;
+
+        if (bothHelpersDead) {
+          // Berserk Rapid Fire
+          if (this.shotTimer >= (BALANCE_CONFIG.bosses.guardians.berserkShotInterval / this.diff.bulletSpeedMult)) {
+            this.shotTimer = 0;
+            sound.playEnemyLaser();
+            const spd = 7.0 * this.diff.bulletSpeedMult;
+            const a = this.age * 0.16;
+            game.bullets.push(new Bullet(this.x, this.y + 35, Math.cos(a) * spd, Math.sin(a) * spd, false, '#ffe600', 20 * this.diff.enemyDmgMult, 5, 'orb'));
+            game.bullets.push(new Bullet(this.x, this.y + 35, -Math.cos(a) * spd, -Math.sin(a) * spd, false, '#ffe600', 20 * this.diff.enemyDmgMult, 5, 'orb'));
+          }
+        } else {
+          // Controlled Mortars
+          if (this.shotTimer >= (70 / this.diff.bulletSpeedMult)) {
+            this.shotTimer = 0;
+            sound.playEnemyLaser();
+            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+            const spd = 8 * this.diff.bulletSpeedMult;
+            game.bullets.push(new Bullet(this.x, this.y + 35, Math.cos(angle) * spd, Math.sin(angle) * spd, false, '#a855f7', 24 * this.diff.enemyDmgMult, 6, 'plasma'));
+          }
+        }
+      }
+
+      hit(damage, hitX, hitY) {
+        if (this.isDying || this.isDeploying) return;
+
+        // Check helper 1 collision
+        if (this.helper1.alive && Math.hypot(hitX - this.helper1.x, hitY - this.helper1.y) < this.helper1.radius) {
+          this.helper1.hp -= damage;
+          if (this.helper1.hp <= 0) {
+            this.helper1.alive = false;
+            sound.playExplosion(true);
+            game.spawnExplosion(this.helper1.x, this.helper1.y, '#00f0ff', 45);
+            game.floatingTexts.push(new FloatingText("UNTERDRÜCKER ZERSTÖRT!", this.helper1.x, this.helper1.y, '#00f0ff', 16));
+            game.spawnCoins(this.helper1.x, this.helper1.y, 20);
+          }
+          return;
+        }
+
+        // Check helper 2 collision
+        if (this.helper2.alive && Math.hypot(hitX - this.helper2.x, hitY - this.helper2.y) < this.helper2.radius) {
+          this.helper2.hp -= damage;
+          if (this.helper2.hp <= 0) {
+            this.helper2.alive = false;
+            sound.playExplosion(true);
+            game.spawnExplosion(this.helper2.x, this.helper2.y, '#ff007f', 45);
+            game.floatingTexts.push(new FloatingText("DISRUPTOR ZERSTÖRT!", this.helper2.x, this.helper2.y, '#ff007f', 16));
+            game.spawnCoins(this.helper2.x, this.helper2.y, 20);
+          }
+          return;
+        }
+
+        // Main Carrier Hit
+        this.hp -= damage;
+        if (this.hp <= 0) {
+          this.hp = 0;
+          this.isDying = true;
+          this.helper1.alive = false;
+          this.helper2.alive = false;
+          game.floatingTexts.push(new FloatingText("TWIN GUARDIANS VERNICHTET!", this.x, this.y, '#ffe600', 26));
+          game.score += 12000;
+          game.spawnCoins(this.x, this.y, 70);
+          game.spawnGuaranteedBossRewards(this.x, this.y);
+          game.checkAchievement('boss2_slain');
+        }
+      }
+
+      draw(c) {
+        c.save();
+
+        if (this.helper1.alive) {
+          c.save();
+          c.translate(this.helper1.x, this.helper1.y);
+          c.shadowColor = '#00f0ff';
+          c.shadowBlur = 15;
+          c.fillStyle = '#0f172a';
+          c.strokeStyle = '#00f0ff';
+          c.lineWidth = 2.5;
+
+          c.beginPath();
+          c.moveTo(0, 18);
+          c.lineTo(20, -12);
+          c.lineTo(0, -6);
+          c.lineTo(-20, -12);
+          c.closePath();
+          c.fill();
+          c.stroke();
+          c.restore();
+        }
+
+        if (this.helper2.alive) {
+          c.save();
+          c.translate(this.helper2.x, this.helper2.y);
+          c.shadowColor = '#ff007f';
+          c.shadowBlur = 15;
+          c.fillStyle = '#1e0c24';
+          c.strokeStyle = '#ff007f';
+          c.lineWidth = 2.5;
+
+          c.beginPath();
+          c.moveTo(0, 18);
+          c.lineTo(20, -12);
+          c.lineTo(0, -6);
+          c.lineTo(-20, -12);
+          c.closePath();
+          c.fill();
+          c.stroke();
+          c.restore();
+        }
+
+        c.translate(this.x, this.y);
+        const bothDead = !this.helper1.alive && !this.helper2.alive;
+        const mainGlow = bothDead ? '#ffe600' : '#a855f7';
+        c.shadowColor = mainGlow;
+        c.shadowBlur = 24;
+
+        c.fillStyle = '#160d2e';
+        c.strokeStyle = mainGlow;
+        c.lineWidth = 3.5;
+
+        c.beginPath();
+        c.moveTo(0, 45);
+        c.lineTo(55, 15);
+        c.lineTo(70, -25);
+        c.lineTo(35, -40);
+        c.lineTo(0, -28);
+        c.lineTo(-35, -40);
+        c.lineTo(-70, -25);
+        c.lineTo(-55, 15);
+        c.closePath();
+        c.fill();
+        c.stroke();
+
+        c.fillStyle = mainGlow;
+        c.beginPath();
+        c.arc(0, 5, 16, 0, Math.PI * 2);
+        c.fill();
+
+        if (this.isDeploying) {
+          c.strokeStyle = 'rgba(168, 85, 247, 0.5)';
+          c.lineWidth = 3;
+          c.beginPath();
+          c.arc(0, 0, 80, 0, Math.PI * 2);
+          c.stroke();
+        }
+
+        c.restore();
+      }
+    }
+
+    // --- GAME ENGINE CONTROLLER ---
+    class GameEngine {
+      constructor() {
+        this.state = 'MENU'; // 'MENU', 'PLAYING', 'PAUSED', 'RESULTS'
+        this.currentDiff = DIFFICULTIES.MEDIUM;
+        this.score = 0;
+        this.runCoins = 0;
+        this.wave = 1;
+        this.enemiesKilled = 0;
+        this.bossesKilled = 0;
+        this.runStartTime = 0;
+
+        this.player = new Player();
+        this.starfield = new Starfield();
+        this.bullets = [];
+        this.enemies = [];
+        this.powerups = [];
+        this.coins = [];
+        this.particles = [];
+        this.floatingTexts = [];
+        this.shockwaves = [];
+        this.boss = null;
+
+        // Wave & Spawning
+        this.spawnQueue = [];
+        this.spawnTimer = 0;
+        this.waveTimer = 0;
+        this.lastDropFrame = -9999;
+        this.currentFrame = 0;
+
+        // Screen Shake
+        this.shakeIntensity = 0;
+        this.shakeTime = 0;
+
+        // Input
+        this.input = {
+          keys: {},
+          mouseX: WIDTH / 2,
+          mouseY: HEIGHT - 120,
+          mouseActive: false,
+          isMouseDown: false,
+          autoFire: true
+        };
+
+        this.lastTime = performance.now();
+        this.initDOM();
+        this.refreshMenuHUD();
+      }
+
+      initDOM() {
+        window.addEventListener('keydown', (e) => {
+          this.input.keys[e.code] = true;
+          if (e.code === 'KeyP' || e.code === 'Escape') {
+            if (this.state === 'PLAYING' || this.state === 'PAUSED') this.togglePause();
+          }
+          if (e.code === 'KeyB') {
+            this.triggerMegaBomb();
+          }
+          if (e.code === 'F3') {
+            const dbg = document.getElementById('debug-hud');
+            dbg.style.display = (dbg.style.display === 'none' || !dbg.style.display) ? 'block' : 'none';
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          this.input.keys[e.code] = false;
+        });
+
+        const updateCoords = (clientX, clientY) => {
+          const rect = canvas.getBoundingClientRect();
+          this.input.mouseX = (clientX - rect.left) * (WIDTH / rect.width);
+          this.input.mouseY = (clientY - rect.top) * (HEIGHT / rect.height);
+          this.input.mouseActive = true;
+        };
+
+        canvas.addEventListener('mousemove', (e) => updateCoords(e.clientX, e.clientY));
+        canvas.addEventListener('mousedown', (e) => {
+          sound.init();
+          this.input.isMouseDown = true;
+          updateCoords(e.clientX, e.clientY);
+        });
+        window.addEventListener('mouseup', () => { this.input.isMouseDown = false; });
+
+        canvas.addEventListener('touchstart', (e) => {
+          sound.init();
+          if (e.touches.length > 0) {
+            updateCoords(e.touches[0].clientX, e.touches[0].clientY);
+            this.input.isMouseDown = true;
+          }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+          if (e.touches.length > 0) {
+            updateCoords(e.touches[0].clientX, e.touches[0].clientY);
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => { this.input.isMouseDown = false; });
+
+        // Menu Buttons
+        document.getElementById('btn-menu-play').addEventListener('click', () => {
+          sound.init();
+          this.showModal('difficulty-modal');
+        });
+
+        document.getElementById('btn-diff-back').addEventListener('click', () => {
+          this.showModal('mainmenu-modal');
+        });
+
+        document.querySelectorAll('.diff-card').forEach(card => {
+          card.addEventListener('click', () => {
+            document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            const diffKey = card.getAttribute('data-diff');
+            this.currentDiff = DIFFICULTIES[diffKey];
+          });
+        });
+
+        document.getElementById('btn-diff-confirm').addEventListener('click', () => {
+          this.startRun();
+        });
+
+        document.getElementById('btn-menu-hangar').addEventListener('click', () => this.openHangar());
+        document.getElementById('btn-hangar-back').addEventListener('click', () => this.showModal('mainmenu-modal'));
+
+        document.getElementById('btn-menu-stats').addEventListener('click', () => this.openStats());
+        document.getElementById('btn-stats-back').addEventListener('click', () => this.showModal('mainmenu-modal'));
+
+        document.getElementById('btn-menu-achievements').addEventListener('click', () => this.openAchievements());
+        document.getElementById('btn-ach-back').addEventListener('click', () => this.showModal('mainmenu-modal'));
+
+        document.getElementById('btn-menu-settings').addEventListener('click', () => this.openSettings());
+        document.getElementById('btn-settings-back').addEventListener('click', () => this.showModal('mainmenu-modal'));
+
+        const btnToggleSound = document.getElementById('btn-toggle-sound');
+        btnToggleSound.addEventListener('click', () => {
+          saveMgr.profile.settings.soundMuted = !saveMgr.profile.settings.soundMuted;
+          sound.muted = saveMgr.profile.settings.soundMuted;
+          btnToggleSound.textContent = sound.muted ? '🔇 AUS' : '🔊 AKTIV';
+          saveMgr.save();
+        });
+
+        const btnToggleShake = document.getElementById('btn-toggle-shake');
+        btnToggleShake.addEventListener('click', () => {
+          saveMgr.profile.settings.screenShake = !saveMgr.profile.settings.screenShake;
+          btnToggleShake.textContent = saveMgr.profile.settings.screenShake ? 'AN (100%)' : 'AUS';
+          saveMgr.save();
+        });
+
+        const btnToggleFlash = document.getElementById('btn-toggle-flash');
+        btnToggleFlash.addEventListener('click', () => {
+          saveMgr.profile.settings.flashEffects = !saveMgr.profile.settings.flashEffects;
+          btnToggleFlash.textContent = saveMgr.profile.settings.flashEffects ? 'AN' : 'AUS';
+          saveMgr.save();
+        });
+
+        document.getElementById('btn-reset-save').addEventListener('click', () => {
+          document.getElementById('reset-confirm-modal').classList.remove('hidden');
+        });
+        document.getElementById('btn-cancel-reset').addEventListener('click', () => {
+          document.getElementById('reset-confirm-modal').classList.add('hidden');
+        });
+        document.getElementById('btn-confirm-reset').addEventListener('click', () => {
+          saveMgr.reset();
+          document.getElementById('reset-confirm-modal').classList.add('hidden');
+          this.showModal('mainmenu-modal');
+          this.refreshMenuHUD();
+        });
+
+        document.getElementById('btn-pause').addEventListener('click', () => this.togglePause());
+        document.getElementById('btn-resume').addEventListener('click', () => this.togglePause());
+        document.getElementById('btn-pause-abort').addEventListener('click', () => this.endRun(false));
+        document.getElementById('btn-bomb').addEventListener('click', () => this.triggerMegaBomb());
+
+        const btnSound = document.getElementById('btn-sound');
+        btnSound.addEventListener('click', () => {
+          const isMuted = sound.toggleMute();
+          btnSound.textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        document.getElementById('btn-res-menu').addEventListener('click', () => {
+          this.showModal('mainmenu-modal');
+          this.refreshMenuHUD();
+        });
+        document.getElementById('btn-res-retry').addEventListener('click', () => {
+          this.startRun();
+        });
+      }
+
+      showModal(modalId) {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+        if (modalId) {
+          const target = document.getElementById(modalId);
+          if (target) target.classList.remove('hidden');
+        }
+      }
+
+      refreshMenuHUD() {
+        document.getElementById('menu-coins').textContent = `🪙 ${saveMgr.profile.coins.toLocaleString()}`;
+        document.getElementById('menu-hiscore').textContent = saveMgr.profile.stats.overallBestScore.toLocaleString();
+      }
+
+      startRun() {
+        this.score = 0;
+        this.runCoins = 0;
+        this.wave = 1;
+        this.enemiesKilled = 0;
+        this.bossesKilled = 0;
+        this.runStartTime = Date.now();
+        this.currentFrame = 0;
+        this.lastDropFrame = -9999;
+
+        this.bullets = [];
+        this.enemies = [];
+        this.powerups = [];
+        this.coins = [];
+        this.particles = [];
+        this.floatingTexts = [];
+        this.shockwaves = [];
+        this.boss = null;
+
+        this.player.initFromUpgrades(this.currentDiff, saveMgr.profile.upgrades);
+        saveMgr.profile.stats.totalGames++;
+        saveMgr.save();
+
+        this.showModal(null);
+        document.getElementById('hud-overlay').classList.remove('hidden');
+        document.getElementById('quick-controls').style.display = 'flex';
+        document.getElementById('boss-hud').style.display = 'none';
+
+        this.state = 'PLAYING';
+        this.startWave(1);
+        this.updateHUD();
+      }
+
+      startWave(waveNum) {
+        this.wave = waveNum;
+        this.spawnQueue = [];
+        this.spawnTimer = 0;
+        this.boss = null;
+        document.getElementById('boss-hud').style.display = 'none';
+
+        const sector = Math.min(5, Math.ceil(waveNum / 3));
+        this.starfield.setSector(sector);
+
+        this.floatingTexts.push(new FloatingText(`WELLE ${waveNum}`, WIDTH / 2, HEIGHT / 2, '#00f0ff', 36));
+
+        // Boss encounter trigger
+        if (waveNum % 5 === 0) {
+          if (waveNum === 5) {
+            this.boss = new BossLaserSentinel(waveNum, this.currentDiff);
+          } else {
+            this.boss = new BossTwinGuardians(waveNum, this.currentDiff);
+          }
+          document.getElementById('boss-hud').style.display = 'flex';
+          document.getElementById('boss-name-label').textContent = `⚠️ ${this.boss.name} ⚠️`;
+          document.getElementById('boss-helpers-bar').style.display = (this.boss.bossId === 'guardians') ? 'flex' : 'none';
+          return;
+        }
+
+        // Standard Spawns
+        const count = 7 + waveNum * 4;
+        for (let i = 0; i < count; i++) {
+          const delay = i * 36;
+          let type = 'interceptor';
+          const r = Math.random();
+          if (waveNum >= 2 && r > 0.6) type = 'cruiser';
+          if (waveNum >= 3 && r > 0.78) type = 'kamikaze';
+          if (waveNum >= 4 && r > 0.88) type = 'phantom';
+
+          this.spawnQueue.push({
+            type: type,
+            delay: delay,
+            x: 70 + Math.random() * (WIDTH - 140)
+          });
+        }
+      }
+
+      endRun(isVictory = false) {
+        this.state = 'RESULTS';
+        document.getElementById('hud-overlay').classList.add('hidden');
+        document.getElementById('quick-controls').style.display = 'none';
+        document.getElementById('boss-hud').style.display = 'none';
+        this.boss = null;
+
+        const diffBonus = this.currentDiff.coinMult;
+        const totalAwardedCoins = Math.round(this.runCoins * diffBonus);
+
+        saveMgr.profile.coins += totalAwardedCoins;
+        saveMgr.profile.totalCoinsEarned += totalAwardedCoins;
+        saveMgr.profile.stats.totalKills += this.enemiesKilled;
+        saveMgr.profile.stats.totalBossesKilled += this.bossesKilled;
+
+        if (isVictory) saveMgr.profile.stats.totalVictories++;
+        else saveMgr.profile.stats.totalDefeats++;
+
+        const survivalSec = Math.floor((Date.now() - this.runStartTime) / 1000);
+        if (survivalSec > saveMgr.profile.stats.bestSurvivalTimeSec) {
+          saveMgr.profile.stats.bestSurvivalTimeSec = survivalSec;
+        }
+
+        const diffKey = this.currentDiff.id;
+        const isNewHi = this.score > saveMgr.profile.stats.bestScore[diffKey];
+        if (isNewHi) {
+          saveMgr.profile.stats.bestScore[diffKey] = this.score;
+        }
+        if (this.score > saveMgr.profile.stats.overallBestScore) {
+          saveMgr.profile.stats.overallBestScore = this.score;
+        }
+        if (this.wave > saveMgr.profile.stats.highestWave) {
+          saveMgr.profile.stats.highestWave = this.wave;
+        }
+
+        saveMgr.save();
+
+        document.getElementById('results-title').textContent = isVictory ? 'MISSION ERFOLGREICH!' : 'MISSION GESCHEITERT';
+        document.getElementById('res-score').textContent = this.score.toLocaleString();
+        document.getElementById('res-coins').textContent = `🪙 +${totalAwardedCoins.toLocaleString()}`;
+        document.getElementById('res-wave').textContent = `Welle ${this.wave}`;
+        document.getElementById('res-bosses').textContent = this.bossesKilled;
+        document.getElementById('res-record-badge').style.display = isNewHi ? 'block' : 'none';
+
+        this.showModal('results-modal');
+      }
+
+      togglePause() {
+        if (this.state === 'PLAYING') {
+          this.state = 'PAUSED';
+          document.getElementById('pause-diff-text').textContent = this.currentDiff.label;
+          document.getElementById('pause-diff-text').style.color = this.currentDiff.color;
+          document.getElementById('pause-modal').classList.remove('hidden');
+        } else if (this.state === 'PAUSED') {
+          this.state = 'PLAYING';
+          document.getElementById('pause-modal').classList.add('hidden');
+          this.lastTime = performance.now();
+        }
+      }
+
+      triggerMegaBomb() {
+        if (this.state !== 'PLAYING' || this.player.bombs <= 0) return;
+
+        this.player.bombs--;
+        sound.playBombBlast();
+        this.triggerScreenShake(BALANCE_CONFIG.bomb.screenShakeIntensity);
+        this.checkAchievement('bomb_wipe');
+
+        // Multi-layered visual bomb shockwave
+        this.spawnShockwave(this.player.x, this.player.y, '#ffffff', WIDTH * 0.75);
+        this.spawnShockwave(this.player.x, this.player.y, '#00f0ff', WIDTH * 0.95);
+        this.spawnShockwave(this.player.x, this.player.y, '#ff007f', WIDTH * 1.15);
+
+        // Flash Effect
+        if (saveMgr.profile.settings.flashEffects) {
+          this.bombFlashAlpha = 0.65;
+        }
+
+        this.floatingTexts.push(new FloatingText("MEGA-BOMBE DETONIERT!", WIDTH / 2, HEIGHT / 2, '#ff2a2a', 28));
+
+        // Vaporize enemy bullets into score sparks
+        this.bullets = this.bullets.filter(b => {
+          if (!b.isPlayer) {
+            this.score += 20;
+            this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, '#00f0ff', 3, 20));
+            return false;
+          }
+          return true;
+        });
+
+        // Vaporize standard screen enemies
+        this.enemies.forEach(e => {
+          this.spawnExplosion(e.x, e.y, e.color, 35);
+          this.score += e.score;
+          this.enemiesKilled++;
+          this.spawnCoins(e.x, e.y, e.coinReward);
+          this.maybeSpawnReward(e.x, e.y, e.type);
+        });
+        this.enemies = [];
+
+        // Apply balanced chunk damage to active Boss
+        if (this.boss && !this.boss.isDying && !this.boss.isDeploying) {
+          this.boss.hit(BALANCE_CONFIG.bomb.bossDamage, this.boss.x, this.boss.y);
+          this.spawnExplosion(this.boss.x, this.boss.y, '#ff2a2a', 70);
+        }
+
+        this.updateHUD();
+      }
+
+      maybeSpawnReward(x, y, enemyType) {
+        // Enforce anti-spam cooldown between powerup drops
+        if (this.currentFrame - this.lastDropFrame < BALANCE_CONFIG.drops.minDropIntervalFrames) {
+          return;
+        }
+
+        let chance = BALANCE_CONFIG.drops.baseEnemyDropChance;
+        if (enemyType === 'cruiser') chance = BALANCE_CONFIG.drops.cruiserDropChance;
+        if (enemyType === 'phantom') chance = BALANCE_CONFIG.drops.phantomDropChance;
+
+        if (Math.random() >= chance) return;
+
+        // Build adaptive candidate pool
+        const candidates = [];
+        // Only drop Laser upgrade if not maxed out
+        if (this.player.weaponLevel < BALANCE_CONFIG.player.maxWeaponLevel) {
+          for (let i = 0; i < BALANCE_CONFIG.drops.weights.laser; i++) candidates.push('L');
+        }
+        // Only drop Heart if player does not already hold max allowed lives
+        if (this.player.lives < BALANCE_CONFIG.player.maxLivesHardCap) {
+          for (let i = 0; i < BALANCE_CONFIG.drops.weights.heart; i++) candidates.push('H');
+        }
+        // Shield
+        const shieldWeight = this.player.hasShield ? 8 : BALANCE_CONFIG.drops.weights.shield;
+        for (let i = 0; i < shieldWeight; i++) candidates.push('S');
+        // Bomb
+        const bombWeight = this.player.bombs >= BALANCE_CONFIG.player.maxBombCapacity ? 6 : BALANCE_CONFIG.drops.weights.bomb;
+        for (let i = 0; i < bombWeight; i++) candidates.push('B');
+
+        if (candidates.length > 0) {
+          const type = candidates[Math.floor(Math.random() * candidates.length)];
+          this.powerups.push(new PowerUp(x, y, type));
+          this.lastDropFrame = this.currentFrame;
+        } else {
+          // If all ordinary upgrades are maxed, drop bonus coin cache
+          this.spawnCoins(x, y, 10);
+        }
+      }
+
+      spawnGuaranteedBossRewards(x, y) {
+        // Boss gives deliberate, curated reward drops
+        this.powerups.push(new PowerUp(x - 25, y, 'S'));
+        this.powerups.push(new PowerUp(x + 25, y, 'B'));
+        if (this.player.weaponLevel < BALANCE_CONFIG.player.maxWeaponLevel) {
+          this.powerups.push(new PowerUp(x, y - 20, 'L'));
+        } else if (this.player.lives < BALANCE_CONFIG.player.maxLivesHardCap) {
+          this.powerups.push(new PowerUp(x, y - 20, 'H'));
+        } else {
+          this.spawnCoins(x, y, 25);
+        }
+      }
+
+      spawnCoins(x, y, count) {
+        for (let i = 0; i < count; i++) {
+          this.coins.push(new CoinPickup(x + (Math.random() * 20 - 10), y + (Math.random() * 20 - 10)));
+        }
+      }
+
+      spawnExplosion(x, y, color = '#ff007f', count = 30) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1.5 + Math.random() * 8.5;
+          const size = 2 + Math.random() * 4;
+          const life = 20 + Math.random() * 25;
+          const pColor = Math.random() > 0.4 ? color : (Math.random() > 0.5 ? '#ffe600' : '#ffffff');
+          this.particles.push(new Particle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, pColor, size, life, Math.random() > 0.5 ? 'circle' : 'spark'));
+        }
+      }
+
+      spawnShockwave(x, y, color, maxRadius) {
+        this.shockwaves.push({ x, y, color, radius: 10, maxRadius, alpha: 1 });
+      }
+
+      triggerScreenShake(intensity) {
+        if (!saveMgr.profile.settings.screenShake) return;
+        this.shakeIntensity = intensity;
+        this.shakeTime = 16;
+      }
+
+      checkAchievement(id) {
+        const def = ACHIEVEMENT_DEFS[id];
+        if (def && saveMgr.unlockAchievement(id)) {
+          sound.playAchievement();
+          const toast = document.getElementById('achievement-toast');
+          document.getElementById('toast-ach-name').textContent = def.title;
+          toast.classList.add('show');
+          setTimeout(() => toast.classList.remove('show'), 3800);
+        }
+      }
+
+      updateHUD() {
+        document.getElementById('hud-score').textContent = this.score.toLocaleString().padStart(7, '0');
+        document.getElementById('hud-hiscore').textContent = (saveMgr.profile.stats.bestScore[this.currentDiff.id] || 0).toLocaleString();
+        document.getElementById('hud-wave').textContent = `WELLE ${this.wave}`;
+        document.getElementById('hud-bomb-count').textContent = this.player.bombs;
+        document.getElementById('hud-run-coins').textContent = this.runCoins;
+
+        const badge = document.getElementById('hud-diff-badge');
+        badge.textContent = this.currentDiff.label;
+        badge.style.color = this.currentDiff.color;
+        badge.style.borderColor = this.currentDiff.color;
+
+        document.querySelectorAll('#weapon-pips .weapon-pip').forEach((pip, idx) => {
+          if (idx < this.player.weaponLevel) pip.classList.add('active');
+          else pip.classList.remove('active');
+        });
+
+        const livesCont = document.getElementById('hud-lives-container');
+        livesCont.innerHTML = '';
+        for (let i = 0; i < BALANCE_CONFIG.player.maxLivesHardCap; i++) {
+          const wrapper = document.createElement('div');
+          wrapper.innerHTML = SHIP_SVG;
+          const icon = wrapper.firstElementChild;
+          if (i >= this.player.lives) icon.classList.add('lost');
+          livesCont.appendChild(icon);
+        }
+
+        // Boss bars
+        if (this.boss && !this.boss.markedForRemoval) {
+          const pct = Math.max(0, Math.min(100, (this.boss.hp / this.boss.maxHp) * 100));
+          document.getElementById('boss-bar-fill').style.width = `${pct}%`;
+
+          if (this.boss.bossId === 'guardians') {
+            const h1Pct = this.boss.helper1.alive ? (this.boss.helper1.hp / this.boss.helper1.maxHp) * 100 : 0;
+            const h2Pct = this.boss.helper2.alive ? (this.boss.helper2.hp / this.boss.helper2.maxHp) * 100 : 0;
+            document.getElementById('helper-l-fill').style.width = `${h1Pct}%`;
+            document.getElementById('helper-r-fill').style.width = `${h2Pct}%`;
+          }
+        }
+
+        // Diagnostic debug HUD
+        const dbg = document.getElementById('debug-hud');
+        if (dbg.style.display !== 'none') {
+          let bossInfo = 'NONE';
+          if (this.boss) {
+            bossInfo = `${this.boss.name} (HP: ${Math.round(this.boss.hp)}/${Math.round(this.boss.maxHp)}, Dep:${this.boss.isDeploying})`;
+          }
+          dbg.textContent = `W:${this.wave} | P_HP:${this.player.lives} | E:${this.enemies.length} | B:${this.bullets.length} | BOSS:${bossInfo}`;
+        }
+      }
+
+      openHangar() {
+        document.getElementById('hangar-coins').textContent = `🪙 ${saveMgr.profile.coins.toLocaleString()}`;
+        const container = document.getElementById('hangar-items-list');
+        container.innerHTML = '';
+
+        Object.values(UPGRADE_DEFS).forEach(upg => {
+          const currentLvl = saveMgr.profile.upgrades[upg.id] || 0;
+          const cost = upg.costs[currentLvl] || 0;
+          const isMax = currentLvl >= upg.maxLevel;
+          const canAfford = saveMgr.profile.coins >= cost && !isMax;
+
+          const itemEl = document.createElement('div');
+          itemEl.className = 'shop-item';
+
+          let pipsHtml = '';
+          for (let i = 0; i < upg.maxLevel; i++) {
+            pipsHtml += `<div class="shop-pip ${i < currentLvl ? 'active' : ''}"></div>`;
+          }
+
+          itemEl.innerHTML = `
+            <div class="shop-item-info">
+              <span class="shop-item-name">${upg.icon} ${upg.name}</span>
+              <span class="shop-item-effect">${upg.getNextText(currentLvl)}</span>
+              <div class="shop-pips">${pipsHtml}</div>
+            </div>
+            <button class="btn-buy" id="btn-buy-${upg.id}" ${canAfford ? '' : 'disabled'}>
+              ${isMax ? 'MAX' : `🪙 ${cost}`}
+            </button>
+          `;
+
+          container.appendChild(itemEl);
+
+          if (!isMax) {
+            itemEl.querySelector(`#btn-buy-${upg.id}`).addEventListener('click', () => {
+              if (saveMgr.profile.coins >= cost) {
+                saveMgr.profile.coins -= cost;
+                saveMgr.profile.upgrades[upg.id] = currentLvl + 1;
+                saveMgr.save();
+                sound.playPowerup('L');
+                this.openHangar();
+                this.refreshMenuHUD();
+              }
+            });
+          }
+        });
+
+        this.showModal('hangar-modal');
+      }
+
+      openStats() {
+        const st = saveMgr.profile.stats;
+        document.getElementById('st-games').textContent = st.totalGames;
+        document.getElementById('st-bosses').textContent = st.totalBossesKilled;
+        document.getElementById('st-kills').textContent = st.totalKills;
+        document.getElementById('st-coins').textContent = saveMgr.profile.totalCoinsEarned.toLocaleString();
+        document.getElementById('st-easy').textContent = (st.bestScore.EASY || 0).toLocaleString();
+        document.getElementById('st-med').textContent = (st.bestScore.MEDIUM || 0).toLocaleString();
+        document.getElementById('st-hard').textContent = (st.bestScore.HARD || 0).toLocaleString();
+        document.getElementById('st-ultra').textContent = (st.bestScore.ULTRA || 0).toLocaleString();
+
+        const mins = Math.floor(st.bestSurvivalTimeSec / 60);
+        const secs = st.bestSurvivalTimeSec % 60;
+        document.getElementById('st-time').textContent = `${mins}m ${secs}s`;
+
+        this.showModal('stats-modal');
+      }
+
+      openAchievements() {
+        const container = document.getElementById('achievements-list');
+        container.innerHTML = '';
+
+        Object.values(ACHIEVEMENT_DEFS).forEach(ach => {
+          const isUnlocked = !!saveMgr.profile.achievements[ach.id];
+          const card = document.createElement('div');
+          card.className = `ach-card ${isUnlocked ? 'unlocked' : ''}`;
+          card.innerHTML = `
+            <div class="ach-icon">${ach.icon}</div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span style="font-family:'Orbitron'; font-size:12px; font-weight:700; color:${isUnlocked ? '#ffe600' : '#8da4c4'};">${ach.title}</span>
+              <span style="font-size:11px; color:#8899b8;">${ach.desc}</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        this.showModal('achievements-modal');
+      }
+
+      openSettings() {
+        const s = saveMgr.profile.settings;
+        document.getElementById('btn-toggle-sound').textContent = sound.muted ? '🔇 AUS' : '🔊 AKTIV';
+        document.getElementById('btn-toggle-shake').textContent = s.screenShake ? 'AN (100%)' : 'AUS';
+        document.getElementById('btn-toggle-flash').textContent = s.flashEffects ? 'AN' : 'AUS';
+        this.showModal('settings-modal');
+      }
+
+      update(dt) {
+        if (this.state !== 'PLAYING') {
+          this.starfield.update(dt);
+          return;
+        }
+
+        this.currentFrame++;
+        this.starfield.update(dt);
+        this.player.update(dt, this.input);
+
+        // Flash fade
+        if (this.bombFlashAlpha > 0) {
+          this.bombFlashAlpha = Math.max(0, this.bombFlashAlpha - 0.04 * dt * 60);
+        }
+
+        // Spawn Wave Queue
+        if (this.spawnQueue.length > 0) {
+          this.spawnTimer += dt * 60;
+          for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
+            const item = this.spawnQueue[i];
+            if (this.spawnTimer >= item.delay) {
+              this.enemies.push(new Enemy(item.type, item.x, -40, this.wave, this.currentDiff));
+              this.spawnQueue.splice(i, 1);
+            }
+          }
+        }
+
+        // Boss Update
+        if (this.boss) {
+          this.boss.update(dt, this.player);
+          if (this.boss.markedForRemoval) {
+            this.bossesKilled++;
+            this.boss = null;
+            document.getElementById('boss-hud').style.display = 'none';
+          }
+        }
+
+        // Bullets
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+          const b = this.bullets[i];
+          b.update(dt);
+          if (b.markedForRemoval) this.bullets.splice(i, 1);
+        }
+
+        // Enemies
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+          const e = this.enemies[i];
+          e.update(dt, this.player);
+          if (e.markedForRemoval) this.enemies.splice(i, 1);
+        }
+
+        // Coins Pickups
+        for (let i = this.coins.length - 1; i >= 0; i--) {
+          const coin = this.coins[i];
+          coin.update(dt, this.player, this.player.magnetBonus);
+          if (coin.markedForRemoval) this.coins.splice(i, 1);
+        }
+
+        // Powerups
+        for (let i = this.powerups.length - 1; i >= 0; i--) {
+          const pu = this.powerups[i];
+          pu.update(dt, this.player, this.player.magnetBonus);
+          if (pu.markedForRemoval) this.powerups.splice(i, 1);
+        }
+
+        // Particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          if (!p.update(dt)) this.particles.splice(i, 1);
+        }
+
+        // Floating texts
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+          const ft = this.floatingTexts[i];
+          if (!ft.update(dt)) this.floatingTexts.splice(i, 1);
+        }
+
+        // Shockwaves
+        for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+          const sw = this.shockwaves[i];
+          sw.radius += 20 * dt * 60;
+          sw.alpha = Math.max(0, 1 - sw.radius / sw.maxRadius);
+          if (sw.radius >= sw.maxRadius) this.shockwaves.splice(i, 1);
+        }
+
+        // --- PRECISE COLLISION DETECTION ---
+        // 1. Player Bullets vs Regular Enemies
+        this.bullets.forEach(b => {
+          if (!b.isPlayer || b.markedForRemoval) return;
+
+          this.enemies.forEach(e => {
+            if (e.markedForRemoval) return;
+            if (Math.hypot(b.x - e.x, b.y - e.y) < b.radius + e.radius) {
+              b.markedForRemoval = true;
+              e.hp -= b.damage;
+              this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 3, -2, '#ffe600', 3, 14, 'spark'));
+
+              if (e.hp <= 0) {
+                e.markedForRemoval = true;
+                sound.playExplosion(false);
+                this.spawnExplosion(e.x, e.y, e.color, 30);
+                this.triggerScreenShake(6);
+                this.score += Math.round(e.score * this.currentDiff.scoreMult);
+                this.enemiesKilled++;
+                this.spawnCoins(e.x, e.y, e.coinReward);
+                this.floatingTexts.push(new FloatingText(`+${e.score}`, e.x, e.y, '#00f0ff', 16));
+                this.checkAchievement('first_kill');
+
+                this.maybeSpawnReward(e.x, e.y, e.type);
+              }
+            }
+          });
+
+          // 2. Player Bullets vs Boss (STRICT HITBOX CHECK - NO ACCIDENTAL GLOBAL DAMAGE)
+          if (this.boss && !this.boss.isDying && !this.boss.isDeploying) {
+            if (this.boss.bossId === 'guardians') {
+              if (this.boss.helper1.alive && Math.hypot(b.x - this.boss.helper1.x, b.y - this.boss.helper1.y) < b.radius + this.boss.helper1.radius) {
+                b.markedForRemoval = true;
+                this.boss.hit(b.damage, b.x, b.y);
+                this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 4, 2, '#00f0ff', 3, 12, 'spark'));
+              } else if (this.boss.helper2.alive && Math.hypot(b.x - this.boss.helper2.x, b.y - this.boss.helper2.y) < b.radius + this.boss.helper2.radius) {
+                b.markedForRemoval = true;
+                this.boss.hit(b.damage, b.x, b.y);
+                this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 4, 2, '#ff007f', 3, 12, 'spark'));
+              } else if (Math.hypot(b.x - this.boss.x, b.y - this.boss.y) < b.radius + this.boss.radius) {
+                b.markedForRemoval = true;
+                this.boss.hit(b.damage, b.x, b.y);
+                this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 4, 2, '#ffe600', 3, 12, 'spark'));
+              }
+            } else {
+              if (Math.hypot(b.x - this.boss.x, b.y - this.boss.y) < b.radius + this.boss.radius) {
+                b.markedForRemoval = true;
+                this.boss.hit(b.damage, b.x, b.y);
+                this.particles.push(new Particle(b.x, b.y, (Math.random() - 0.5) * 4, 2, '#ffe600', 3, 12, 'spark'));
+              }
+            }
+          }
+        });
+
+        // 3. Enemy Bullets vs Player
+        this.bullets.forEach(b => {
+          if (b.isPlayer || b.markedForRemoval) return;
+          if (Math.hypot(b.x - this.player.x, b.y - this.player.y) < b.radius + 18) {
+            b.markedForRemoval = true;
+            const isDead = this.player.hit();
+            if (isDead) {
+              setTimeout(() => this.endRun(false), 900);
+            }
+          }
+        });
+
+        // 4. Enemy Ship vs Player Crash
+        this.enemies.forEach(e => {
+          if (e.markedForRemoval) return;
+          if (Math.hypot(e.x - this.player.x, e.y - this.player.y) < e.radius + 20) {
+            e.markedForRemoval = true;
+            this.spawnExplosion(e.x, e.y, e.color, 30);
+            const isDead = this.player.hit();
+            if (isDead) {
+              setTimeout(() => this.endRun(false), 900);
+            }
+          }
+        });
+
+        // 5. Coin Pickups
+        this.coins.forEach(coin => {
+          if (coin.markedForRemoval) return;
+          if (Math.hypot(coin.x - this.player.x, coin.y - this.player.y) < coin.radius + 22) {
+            coin.markedForRemoval = true;
+            sound.playCoinSound();
+            this.runCoins += coin.value;
+            this.score += 25;
+            if (saveMgr.profile.totalCoinsEarned + this.runCoins >= 500) {
+              this.checkAchievement('coin_500');
+            }
+          }
+        });
+
+        // 6. Powerup Pickups
+        this.powerups.forEach(pu => {
+          if (pu.markedForRemoval) return;
+          if (Math.hypot(pu.x - this.player.x, pu.y - this.player.y) < pu.radius + 24) {
+            pu.markedForRemoval = true;
+            sound.playPowerup(pu.type);
+            this.score += 250;
+
+            if (pu.type === 'L') {
+              this.player.weaponLevel = Math.min(this.player.maxWeaponLevel, this.player.weaponLevel + 1);
+              this.floatingTexts.push(new FloatingText("LASER UPGRADE!", this.player.x, this.player.y - 30, '#00f0ff', 20));
+            } else if (pu.type === 'S') {
+              this.player.hasShield = true;
+              this.floatingTexts.push(new FloatingText("SCHILD AKTIV!", this.player.x, this.player.y - 30, '#39ff14', 20));
+            } else if (pu.type === 'B') {
+              this.player.bombs = Math.min(BALANCE_CONFIG.player.maxBombCapacity, this.player.bombs + 1);
+              this.floatingTexts.push(new FloatingText("+1 MEGA-BOMBE!", this.player.x, this.player.y - 30, '#ff2a2a', 20));
+            } else if (pu.type === 'H') {
+              if (this.player.lives < BALANCE_CONFIG.player.maxLivesHardCap) {
+                this.player.lives = Math.min(BALANCE_CONFIG.player.maxLivesHardCap, this.player.lives + 1);
+                this.floatingTexts.push(new FloatingText("+1 EXTRA LEBEN!", this.player.x, this.player.y - 30, '#ff007f', 20));
+              } else {
+                this.score += 500;
+                this.floatingTexts.push(new FloatingText("+500 BONUS PUNKTE!", this.player.x, this.player.y - 30, '#ffe600', 18));
+              }
+            }
+          }
+        });
+
+        // 7. Wave Progression
+        if (this.spawnQueue.length === 0 && this.enemies.length === 0 && !this.boss) {
+          this.waveTimer += dt * 60;
+          if (this.waveTimer > 90) {
+            this.waveTimer = 0;
+            if (this.currentDiff.id === 'HARD' && this.wave >= 5) this.checkAchievement('veteran_win');
+            if (this.currentDiff.id === 'ULTRA' && this.wave >= 4) this.checkAchievement('ultra_survivor');
+            this.startWave(this.wave + 1);
+          }
+        }
+
+        this.updateHUD();
+      }
+
+      draw() {
+        ctx.save();
+
+        if (this.shakeTime > 0) {
+          const sx = (Math.random() - 0.5) * this.shakeIntensity;
+          const sy = (Math.random() - 0.5) * this.shakeIntensity;
+          ctx.translate(sx, sy);
+          this.shakeTime--;
+          this.shakeIntensity *= 0.9;
+        }
+
+        ctx.fillStyle = '#05040d';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        this.starfield.draw(ctx);
+
+        // Bomb Flash
+        if (this.bombFlashAlpha > 0) {
+          ctx.save();
+          ctx.fillStyle = `rgba(255, 255, 255, ${this.bombFlashAlpha})`;
+          ctx.fillRect(0, 0, WIDTH, HEIGHT);
+          ctx.restore();
+        }
+
+        // Shockwaves
+        this.shockwaves.forEach(sw => {
+          ctx.save();
+          ctx.globalAlpha = sw.alpha;
+          ctx.strokeStyle = sw.color;
+          ctx.lineWidth = 4;
+          ctx.shadowColor = sw.color;
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // Entities
+        this.coins.forEach(c => c.draw(ctx));
+        this.powerups.forEach(pu => pu.draw(ctx));
+        this.bullets.forEach(b => b.draw(ctx));
+        this.enemies.forEach(e => e.draw(ctx));
+        if (this.boss) this.boss.draw(ctx);
+
+        if (this.state === 'PLAYING' || this.state === 'PAUSED') {
+          this.player.draw(ctx);
+        }
+
+        this.particles.forEach(p => p.draw(ctx));
+        this.floatingTexts.forEach(ft => ft.draw(ctx));
+
+        ctx.restore();
+      }
+
+      loop(now) {
+        const dt = Math.min((now - this.lastTime) / 1000, 0.1);
+        this.lastTime = now;
+
+        this.update(dt);
+        this.draw();
+
+        requestAnimationFrame((t) => this.loop(t));
+      }
+    }
+
+    // Launch Game on Window Load
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new GameEngine();
+      requestAnimationFrame((t) => game.loop(t));
+    });
+  </script>
+</body>
+</html>
