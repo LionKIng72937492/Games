@@ -211,13 +211,17 @@
       position: absolute;
       top: 14px;
       right: 14px;
+      max-width: calc(50% - 22px);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
       background: linear-gradient(135deg, #ff007f, #a855f7);
       color: #fff;
       font-family: 'Orbitron', monospace;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 1.5px;
-      padding: 4px 12px;
+      letter-spacing: 1.1px;
+      padding: 4px 10px;
       border-radius: 20px;
       box-shadow: 0 0 12px rgba(255, 0, 127, 0.6);
       text-transform: uppercase;
@@ -301,6 +305,100 @@
       background: linear-gradient(135deg, #4ef2ff, #0099ff);
       box-shadow: 0 0 30px rgba(0, 240, 255, 0.85);
       transform: scale(1.02);
+    }
+
+    /* CELL WARS — scoped bio-arena identity */
+    .cellwars-card {
+      border-color: rgba(60, 245, 198, 0.34);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(60, 245, 198, 0.14);
+    }
+
+    .cellwars-card:hover {
+      border-color: #3cf5c6;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.75), 0 0 45px rgba(60, 245, 198, 0.4);
+    }
+
+    .cellwars-banner {
+      background:
+        radial-gradient(circle at 54% 48%, rgba(30, 130, 112, 0.32) 0%, rgba(7, 24, 32, 0.9) 46%, #05040d 100%);
+      border-bottom-color: rgba(60, 245, 198, 0.25);
+    }
+
+    .cellwars-card .card-badge {
+      right: 14px;
+      background: linear-gradient(135deg, #3cf5c6, #c8ff63);
+      color: #04130f;
+      box-shadow: 0 0 14px rgba(60, 245, 198, 0.5);
+    }
+
+    .cellwars-card .card-badge.tag-bio {
+      right: auto;
+      left: 14px;
+      background: rgba(5, 24, 22, 0.82);
+      border: 1px solid rgba(60, 245, 198, 0.5);
+      color: #9effe6;
+      box-shadow: 0 0 10px rgba(60, 245, 198, 0.2);
+    }
+
+    .cellwars-art {
+      width: 100%;
+      height: 100%;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+
+    .cellwars-card:hover .cellwars-art {
+      transform: scale(1.035);
+    }
+
+    .cellwars-cell-main,
+    .cellwars-cell-lime,
+    .cellwars-cell-magenta {
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    .cellwars-cell-main {
+      animation: cellwars-float 4.6s ease-in-out infinite;
+    }
+
+    .cellwars-cell-lime {
+      animation: cellwars-float 5.4s ease-in-out -1.4s infinite reverse;
+    }
+
+    .cellwars-cell-magenta {
+      animation: cellwars-float 4.1s ease-in-out -2.2s infinite;
+    }
+
+    @keyframes cellwars-float {
+      0%, 100% { transform: translateY(-3px) scale(1); }
+      50% { transform: translateY(3px) scale(1.018); }
+    }
+
+    .cellwars-card .game-title {
+      color: #dffff8;
+      text-shadow: 0 0 12px rgba(60, 245, 198, 0.8);
+    }
+
+    .cellwars-card .card-btn {
+      background: linear-gradient(135deg, #3cf5c6, #0fb89a);
+      box-shadow: 0 0 20px rgba(60, 245, 198, 0.4);
+    }
+
+    .cellwars-card:hover .card-btn {
+      background: linear-gradient(135deg, #9effe6, #3cf5c6);
+      box-shadow: 0 0 30px rgba(60, 245, 198, 0.75);
+    }
+
+    .cellwars-card .feature-tag {
+      background: rgba(60, 245, 198, 0.07);
+      border-color: rgba(60, 245, 198, 0.24);
+      color: #d4fff6;
+    }
+
+    .cellwars-card .tag-lime {
+      border-color: rgba(200, 255, 99, 0.28);
+      color: #e7ffb8;
     }
 
     /* Placeholder Card for upcoming games */
@@ -399,7 +497,104 @@
         </div>
       </a>
 
-      <!-- 2. Placeholder Card for Future Games -->
+      <!-- 2. CELL WARS -->
+      <a href="cell-wars/index.html" class="game-card cellwars-card">
+        <div class="card-banner cellwars-banner">
+          <div class="card-badge tag-bio">BIO-ARENA</div>
+          <div class="card-badge">NEU</div>
+          <div class="banner-graphic">
+            <svg class="cellwars-art" viewBox="0 0 380 220" role="img" aria-label="Mikro-Arena mit leuchtenden Zellen und Nahrungspartikeln">
+              <defs>
+                <radialGradient id="cwHubCellA" cx="34%" cy="28%" r="78%">
+                  <stop offset="0" stop-color="#e7fff9"/>
+                  <stop offset="0.28" stop-color="#78ffe3"/>
+                  <stop offset="0.72" stop-color="#26cdb0"/>
+                  <stop offset="1" stop-color="#07594f"/>
+                </radialGradient>
+                <radialGradient id="cwHubCellLime" cx="32%" cy="28%" r="76%">
+                  <stop offset="0" stop-color="#f4ffd2"/>
+                  <stop offset="0.38" stop-color="#c8ff63"/>
+                  <stop offset="1" stop-color="#4b7a08"/>
+                </radialGradient>
+                <radialGradient id="cwHubCellMagenta" cx="32%" cy="28%" r="76%">
+                  <stop offset="0" stop-color="#ffd8f2"/>
+                  <stop offset="0.4" stop-color="#ff59c7"/>
+                  <stop offset="1" stop-color="#6c0a4e"/>
+                </radialGradient>
+                <pattern id="cwHubGrid" width="38" height="38" patternUnits="userSpaceOnUse">
+                  <path d="M38 0H0V38" fill="none" stroke="#5ff5d9" stroke-opacity="0.09" stroke-width="1"/>
+                </pattern>
+                <filter id="cwHubGlow" x="-70%" y="-70%" width="240%" height="240%">
+                  <feGaussianBlur stdDeviation="7" result="blur"/>
+                  <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <rect width="380" height="220" fill="url(#cwHubGrid)"/>
+              <circle cx="205" cy="110" r="72" fill="none" stroke="#8affea" stroke-opacity="0.28" stroke-width="1.3" stroke-dasharray="4 7"/>
+              <circle cx="205" cy="110" r="85" fill="none" stroke="#5ff5d9" stroke-opacity="0.08" stroke-width="1"/>
+
+              <g class="cellwars-cell-magenta" filter="url(#cwHubGlow)">
+                <circle cx="102" cy="164" r="18" fill="url(#cwHubCellMagenta)" stroke="#ff9ade" stroke-opacity="0.75" stroke-width="1.2"/>
+                <circle cx="97" cy="158" r="5.2" fill="#fff" opacity="0.35"/>
+              </g>
+
+              <g class="cellwars-cell-lime" filter="url(#cwHubGlow)">
+                <circle cx="291" cy="162" r="27" fill="url(#cwHubCellLime)" stroke="#dcff9a" stroke-opacity="0.8" stroke-width="1.4"/>
+                <circle cx="283" cy="153" r="7.4" fill="#fff" opacity="0.34"/>
+                <circle cx="291" cy="162" r="9.5" fill="#f5ffd6" opacity="0.08"/>
+              </g>
+
+              <g class="cellwars-cell-main" filter="url(#cwHubGlow)">
+                <circle cx="205" cy="110" r="56" fill="url(#cwHubCellA)" stroke="#b6fff0" stroke-width="1.8"/>
+                <circle cx="205" cy="110" r="37" fill="none" stroke="#d8fff8" stroke-opacity="0.16" stroke-width="1"/>
+                <circle cx="188" cy="91" r="15" fill="#fff" opacity="0.26"/>
+                <circle cx="205" cy="110" r="18" fill="#eafffb" opacity="0.06"/>
+              </g>
+
+              <g opacity="0.95">
+                <circle cx="62" cy="58" r="3.4" fill="#ff59c7" filter="url(#cwHubGlow)"/>
+                <circle cx="121" cy="43" r="2.6" fill="#c8ff63"/>
+                <circle cx="306" cy="53" r="3.2" fill="#3cf5c6"/>
+                <circle cx="331" cy="113" r="2.4" fill="#ffd75e"/>
+                <circle cx="66" cy="139" r="2.7" fill="#c8ff63"/>
+                <circle cx="154" cy="190" r="3.1" fill="#3cf5c6"/>
+                <circle cx="253" cy="49" r="2.4" fill="#ff59c7"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div>
+            <div class="game-title">
+              <span>🧫</span> CELL WARS
+            </div>
+            <p class="game-desc" style="margin-top: 8px;">
+              Lebendige Mikro-Arena: Friss, wachse und teile deine Zelle. Entkomme bis zu 20
+              lokalen KI-Jägern, erklimme die Rangliste und dominiere das Becken.
+            </p>
+          </div>
+
+          <div class="feature-tags">
+            <span class="feature-tag">🧫 4 Schwierigkeiten</span>
+            <span class="feature-tag">🤖 Lokale KI-Bots</span>
+            <span class="feature-tag tag-lime">⚡ Teilen &amp; Mergen</span>
+            <span class="feature-tag tag-lime">🎨 10 Zellstämme</span>
+            <span class="feature-tag">💾 Lokales Profil</span>
+          </div>
+
+          <div class="card-btn">
+            <span>ARENA BETRETEN</span>
+            <span>➔</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 3. Placeholder Card for Future Games -->
       <div class="game-card placeholder">
         <div class="card-banner" style="background: radial-gradient(circle, #0e0a24 0%, #04020a 100%);">
           <div style="font-family:'Orbitron'; font-size: 38px; color: rgba(255,255,255,0.15);">

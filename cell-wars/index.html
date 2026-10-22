@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#05070e">
+  <title>CELL WARS — Deluxe Browser Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="cw-app" class="cw-app">
+
+    <!-- Ambient menu background -->
+    <canvas id="cw-menu-bg" class="cw-menu-bg" aria-hidden="true"></canvas>
+    <div class="cw-ambient" aria-hidden="true"></div>
+
+    <!-- Game canvas -->
+    <canvas id="cw-canvas" class="cw-game-canvas" aria-hidden="true"></canvas>
+    <div class="cw-vignette" aria-hidden="true"></div>
+
+    <!-- In-game HUD -->
+    <div id="cw-hud" class="cw-hud" aria-hidden="true">
+      <div class="cw-hud-top">
+        <div class="cw-hud-cluster">
+          <div class="cw-hud-name"><span class="cw-status-dot"></span><span id="cw-hud-player-name">PILOT</span></div>
+          <div class="cw-hud-massline">
+            <span class="cw-hud-label">BIOMASSE</span>
+            <strong id="cw-hud-mass">100</strong>
+          </div>
+          <div class="cw-hud-meta">
+            <span>RANG <b id="cw-hud-rank">#--</b></span>
+            <span>ZEIT <b id="cw-hud-time">0:00</b></span>
+            <span>KILLS <b id="cw-hud-kills">0</b></span>
+          </div>
+        </div>
+        <button type="button" id="cw-btn-pause" class="cw-icon-btn" aria-label="Pause" title="Pause (ESC)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        </button>
+      </div>
+
+      <aside class="cw-leaderboard cw-glass" aria-label="Rangliste">
+        <header><span>RANGLISTE</span><span class="cw-live-dot"></span></header>
+        <ol id="cw-leaderboard-list"></ol>
+      </aside>
+
+      <div class="cw-minimap cw-glass">
+        <span class="cw-minimap-label">RADAR</span>
+        <canvas id="cw-minimap-canvas" width="152" height="152"></canvas>
+      </div>
+
+      <div id="cw-controls-hint" class="cw-hint cw-glass">
+        <span class="cw-hint-desktop"><b>MAUS / WASD</b> BEWEGEN &nbsp;·&nbsp; <b>LEER / KLICK</b> TEILEN &nbsp;·&nbsp; <b>ESC</b> PAUSE</span>
+        <span class="cw-hint-touch"><b>ZIEHEN</b> BEWEGEN &nbsp;·&nbsp; <b>SPLIT</b> TEILEN</span>
+      </div>
+
+      <button type="button" id="cw-btn-touch-split" class="cw-touch-split" aria-label="Zelle teilen">SPLIT</button>
+    </div>
+
+    <!-- Screens -->
+    <main class="cw-screens">
+      <section id="cw-screen-menu" class="cw-screen is-active" aria-label="Hauptmenü">
+        <div class="cw-menu-shell">
+          <div class="cw-menu-main">
+            <div class="cw-brandline"><span class="cw-status-dot"></span> BIO-ARENA // LOKALE SIMULATION</div>
+            <h1 class="cw-logo"><span class="cw-logo-cell">CELL</span><span class="cw-logo-wars">WARS</span></h1>
+            <p class="cw-tagline">GROW. HUNT. DOMINATE.</p>
+            <p class="cw-lede">Eine lebendige Mikro-Arena. Friss, wachse und stelle dich bis zu zwanzig lokalen KI-Zellen. Nur eine Spezies beherrscht das Becken.</p>
+
+            <nav class="cw-menu-actions" aria-label="Hauptmenü">
+              <button type="button" id="cw-btn-play" class="cw-btn cw-btn-primary">
+                <span class="cw-btn-index">01</span><span class="cw-btn-text">BATTLE BOTS</span><span class="cw-btn-arrow">→</span>
+              </button>
+              <button type="button" id="cw-btn-collection" class="cw-btn cw-btn-secondary">
+                <span class="cw-btn-index">02</span><span class="cw-btn-text">COLLECTION</span><span class="cw-btn-arrow">→</span>
+              </button>
+              <button type="button" id="cw-btn-settings" class="cw-btn cw-btn-secondary">
+                <span class="cw-btn-index">03</span><span class="cw-btn-text">SETTINGS</span><span class="cw-btn-arrow">→</span>
+              </button>
+              <a href="../index.html" class="cw-btn cw-btn-ghost">
+                <span class="cw-btn-index">04</span><span class="cw-btn-text">BACK TO GAMES</span><span class="cw-btn-arrow">↩</span>
+              </a>
+            </nav>
+
+            <div class="cw-menu-stats">
+              <div><span>CREDITS</span><b id="cw-menu-coins">0</b></div>
+              <div><span>BESTE MASSE</span><b id="cw-menu-best">0</b></div>
+              <div><span>BATTLES</span><b id="cw-menu-games">0</b></div>
+            </div>
+          </div>
+
+          <aside class="cw-specimen" aria-label="Aktiver Zellstamm">
+            <div class="cw-specimen-head"><span>AKTIVER STAMM</span><span id="cw-menu-skin-code">CW-01</span></div>
+            <div class="cw-orb-stage">
+              <span class="cw-orb-ring r1"></span>
+              <span class="cw-orb-ring r2"></span>
+              <div class="cw-orb-orbit"><span class="cw-orb-moon"></span></div>
+              <div class="cw-orb" id="cw-menu-orb"><span class="cw-orb-core"></span></div>
+              <span class="cw-orb-food f1"></span><span class="cw-orb-food f2"></span><span class="cw-orb-food f3"></span>
+            </div>
+            <div class="cw-specimen-info">
+              <strong id="cw-menu-skin-name">PROTO</strong>
+              <span id="cw-menu-skin-desc">Ausgewogener Allrounder</span>
+            </div>
+            <div class="cw-specimen-foot">
+              <span class="cw-mini-label">STATUS</span><b class="cw-ready">BEREIT</b>
+            </div>
+          </aside>
+        </div>
+        <footer class="cw-menu-foot">
+          <span>LOKALE KI-BOTS · KEIN ONLINE-MULTIPLAYER</span>
+          <span>FORTSCHRITT WIRD LOKAL GESPEICHERT</span>
+        </footer>
+      </section>
+
+      <section id="cw-screen-setup" class="cw-screen" aria-label="Battle Setup">
+        <div class="cw-page">
+          <header class="cw-page-head">
+            <button type="button" id="cw-setup-back" class="cw-back">← ZURÜCK</button>
+            <span class="cw-page-kicker">BATTLE SETUP // LOKALE ARENA</span>
+          </header>
+
+          <div class="cw-setup-grid">
+            <div class="cw-panel cw-setup-main">
+              <label class="cw-field-label" for="cw-name-input">PILOTENNAME</label>
+              <div class="cw-input-wrap">
+                <span class="cw-input-prefix">ID</span>
+                <input id="cw-name-input" class="cw-input" type="text" maxlength="14" autocomplete="off" spellcheck="false" placeholder="PILOT">
+              </div>
+
+              <div class="cw-section-label">SCHWIERIGKEITSGRAD</div>
+              <div id="cw-difficulty-grid" class="cw-difficulty-grid"></div>
+
+              <button type="button" id="cw-btn-start" class="cw-btn cw-btn-primary cw-btn-wide">
+                <span class="cw-btn-text">BATTLE STARTEN</span><span class="cw-btn-arrow">→</span>
+              </button>
+              <p class="cw-micro">Deine Gegner sind lokale KI-Bots. Kein Netzwerk, keine Accounts.</p>
+            </div>
+
+            <aside class="cw-panel cw-setup-side">
+              <span class="cw-kicker">DEIN STAMM</span>
+              <div class="cw-setup-orb-wrap">
+                <div class="cw-mini-orb" id="cw-setup-orb"></div>
+              </div>
+              <strong id="cw-setup-skin-name" class="cw-setup-skin-name">PROTO</strong>
+              <span id="cw-setup-skin-desc" class="cw-setup-skin-desc">Ausgewogener Allrounder</span>
+
+              <div class="cw-setup-facts">
+                <div><span>BESTE MASSE</span><b id="cw-setup-best">0</b></div>
+                <div><span>CREDITS</span><b id="cw-setup-coins">0</b></div>
+              </div>
+
+              <ul class="cw-rules">
+                <li><b>Nahrung</b> einsammeln lässt dich wachsen.</li>
+                <li><b>Größere Zellen</b> fressen kleinere.</li>
+                <li><b>Leertaste</b> teilt deine Zelle.</li>
+                <li>Überlebe und führe die Rangliste an.</li>
+              </ul>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="cw-screen-collection" class="cw-screen" aria-label="Collection">
+        <div class="cw-page">
+          <header class="cw-page-head">
+            <button type="button" id="cw-collection-back" class="cw-back">← ZURÜCK</button>
+            <span class="cw-page-kicker">COLLECTION // ZELLSTÄMME</span>
+            <div class="cw-currency">CREDITS <b id="cw-collection-coins">0</b></div>
+          </header>
+          <p class="cw-page-lede">Verdiene Credits in Battle Bots und schalte neue Zellfarben frei. Freigeschaltete Stämme bleiben lokal gespeichert.</p>
+          <div id="cw-skin-grid" class="cw-skin-grid"></div>
+        </div>
+      </section>
+
+      <section id="cw-screen-settings" class="cw-screen" aria-label="Einstellungen">
+        <div class="cw-page cw-page-narrow">
+          <header class="cw-page-head">
+            <button type="button" id="cw-settings-back" class="cw-back">← ZURÜCK</button>
+            <span class="cw-page-kicker">SETTINGS // SYSTEM</span>
+          </header>
+
+          <div class="cw-panel cw-settings-panel">
+            <div class="cw-settings-group">
+              <div class="cw-section-label">AUDIO</div>
+              <div class="cw-setting-row">
+                <div><label for="cw-set-sfx">SOUNDEFFEKTE</label><small>Treffer, Teilen, Menüs</small></div>
+                <div class="cw-slider-wrap"><input id="cw-set-sfx" type="range" min="0" max="1" step="0.05"><span id="cw-set-sfx-val">70%</span></div>
+              </div>
+              <div class="cw-setting-row">
+                <div><label for="cw-set-music">AMBIENT-MUSIK</label><small>Lokaler Synth-Klangteppich</small></div>
+                <div class="cw-slider-wrap"><input id="cw-set-music" type="range" min="0" max="1" step="0.05"><span id="cw-set-music-val">30%</span></div>
+              </div>
+            </div>
+
+            <div class="cw-settings-group">
+              <div class="cw-section-label">DARSTELLUNG</div>
+              <div class="cw-setting-row">
+                <div><label>PARTIKEL &amp; EFFEKTE</label><small>Funken, Schockwellen, Screenshake</small></div>
+                <button type="button" id="cw-set-particles" class="cw-toggle" aria-pressed="true">AN</button>
+              </div>
+              <div class="cw-setting-row">
+                <div><label>STEUERUNGSHINWEISE</label><small>Hinweisleiste im Battle</small></div>
+                <button type="button" id="cw-set-hints" class="cw-toggle" aria-pressed="true">AN</button>
+              </div>
+              <div class="cw-setting-row cw-setting-row-top">
+                <div><label>QUALITÄT</label><small id="cw-set-quality-desc">900 Nahrung · volle Effekte · DPR 2</small></div>
+                <div id="cw-quality-group" class="cw-segmented">
+                  <button type="button" data-quality="low">LOW</button>
+                  <button type="button" data-quality="medium">MED</button>
+                  <button type="button" data-quality="high">HIGH</button>
+                </div>
+              </div>
+              <div class="cw-setting-row">
+                <div><label>VOLLBILD</label><small>Browser Fullscreen API</small></div>
+                <button type="button" id="cw-btn-fullscreen" class="cw-toggle">AKTIVIEREN</button>
+              </div>
+            </div>
+
+            <div class="cw-settings-group">
+              <div class="cw-section-label">STEUERUNG</div>
+              <div class="cw-controls-grid">
+                <div><span>MAUS</span><b>Richtung</b></div>
+                <div><span>W A S D / PFEILE</span><b>Richtung</b></div>
+                <div><span>LEER / LINKSKLICK</span><b>Zelle teilen</b></div>
+                <div><span>ESC</span><b>Pause</b></div>
+              </div>
+              <p class="cw-micro">Alle Einstellungen werden lokal in deinem Browser gespeichert.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cw-screen-pause" class="cw-screen cw-overlay" aria-label="Pause">
+        <div class="cw-modal">
+          <span class="cw-kicker">SIMULATION ANGEHALTEN</span>
+          <h2 class="cw-modal-title">PAUSE</h2>
+          <div class="cw-pause-stats">
+            <div><span>MASSE</span><b id="cw-pause-mass">100</b></div>
+            <div><span>RANG</span><b id="cw-pause-rank">#--</b></div>
+            <div><span>ZEIT</span><b id="cw-pause-time">0:00</b></div>
+          </div>
+          <div class="cw-modal-actions">
+            <button type="button" id="cw-btn-resume" class="cw-btn cw-btn-primary"><span class="cw-btn-text">FORTSETZEN</span><span class="cw-btn-arrow">→</span></button>
+            <button type="button" id="cw-btn-restart" class="cw-btn cw-btn-secondary"><span class="cw-btn-text">NEUSTART</span><span class="cw-btn-arrow">↻</span></button>
+            <button type="button" id="cw-btn-pause-settings" class="cw-btn cw-btn-secondary"><span class="cw-btn-text">EINSTELLUNGEN</span><span class="cw-btn-arrow">→</span></button>
+            <button type="button" id="cw-btn-quit" class="cw-btn cw-btn-ghost"><span class="cw-btn-text">HAUPTMENÜ</span><span class="cw-btn-arrow">↩</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="cw-screen-gameover" class="cw-screen cw-overlay" aria-label="Ergebnis">
+        <div class="cw-modal cw-results">
+          <span class="cw-kicker" id="cw-res-kicker">RUN TERMINATED</span>
+          <h2 class="cw-modal-title" id="cw-res-title">VERSCHLUNGEN.</h2>
+          <p class="cw-res-sub" id="cw-res-sub">Die Arena hat dich gefressen. Wachse beim nächsten Lauf klüger.</p>
+
+          <div class="cw-result-grid">
+            <div><span>ÜBERLEBENSZEIT</span><b id="cw-res-time">0:00</b></div>
+            <div><span>MAX. MASSE</span><b id="cw-res-mass">0</b></div>
+            <div><span>GEFRESSEN</span><b id="cw-res-kills">0</b></div>
+            <div><span>PLATZIERUNG</span><b id="cw-res-rank">#--</b></div>
+          </div>
+
+          <div class="cw-bestline"><span>PERSÖNLICHE BESTLEISTUNG</span><b id="cw-res-best">0</b></div>
+          <div class="cw-rewardline">+ <b id="cw-res-coins">0</b> CREDITS <span id="cw-res-newbest" class="cw-newbest">NEUER REKORD</span></div>
+
+          <div class="cw-modal-actions cw-modal-actions-row">
+            <button type="button" id="cw-btn-again" class="cw-btn cw-btn-primary"><span class="cw-btn-text">NOCHMAL</span><span class="cw-btn-arrow">↻</span></button>
+            <button type="button" id="cw-btn-gameover-menu" class="cw-btn cw-btn-secondary"><span class="cw-btn-text">HAUPTMENÜ</span><span class="cw-btn-arrow">↩</span></button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="cw-toast" class="cw-toast" role="status" aria-live="polite"></div>
+    <noscript><div class="cw-noscript">CELL WARS benötigt JavaScript.</div></noscript>
+  </div>
+
+  <script src="game.js" defer></script>
+</body>
+</html>
