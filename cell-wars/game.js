@@ -29,6 +29,8 @@
   const START_MASS = 100;
   const MAX_CELL_MASS = 24000;
   const EAT_RATIO = 1.22;
+  const EAT_CAPTURE_PAD = 0.18;
+  const EAT_SUCTION_PAD = 0.9;
   const THREAT_RATIO = 1.20;
   const MIN_SPLIT_MASS = 80;
   const MAX_PLAYER_CELLS = 8;
@@ -36,9 +38,38 @@
   const SPLIT_LAUNCH_SPEED = 760;
   const MERGE_BASE_TIME = 8;
   const PLAYER_SPAWN_SHIELD = 3;
-  const FOOD_MASS_MIN = 4.4;
-  const FOOD_MASS_MAX = 6.4;
   const TAU = Math.PI * 2;
+
+  // W mass ejection: each pellet is edible by any cell, but the owner gets a
+  // short grace period so ejected mass does not snap straight back.
+  const EJECT_COST = 14;
+  const EJECT_MASS = 10;
+  const EJECT_MIN_CELL_MASS = 42;
+  const EJECT_COOLDOWN = 0.16;
+  const EJECT_SPEED = 560;
+  const EJECT_OWNER_GRACE = 0.38;
+  const MAX_EJECTED = 90;
+
+  // Fixed spike rings: small cells fit through the gaps, large cells are
+  // physically blocked and cannot reach protected cells inside.
+  const SAFE_ZONE_ENTRY_RADIUS = 27;
+  const SAFE_ZONE_SPIKE_SIZE = 13;
+  const SAFE_ZONE_SPIKE_COUNT = 28;
+  const SAFE_ZONE_LAYOUT = [
+    { x: 1320, y: 1320, radius: 350 },
+    { x: ARENA_SIZE - 1320, y: 1320, radius: 350 },
+    { x: 1320, y: ARENA_SIZE - 1320, radius: 350 },
+    { x: ARENA_SIZE - 1320, y: ARENA_SIZE - 1320, radius: 350 },
+    { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2, radius: 390 }
+  ];
+
+  // Viruses are large spiky cells. A sufficiently large cell that touches one
+  // bursts into several smaller cells; the virus respawns elsewhere.
+  const VIRUS_RADIUS = 58;
+  const VIRUS_COUNT = 8;
+  const VIRUS_POP_MASS = 150;
+  const VIRUS_RESPAWN_MIN = 7;
+  const VIRUS_RESPAWN_MAX = 12;
 
   const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -112,7 +143,7 @@
       label: 'EASY',
       color: '#5ef2c2',
       blurb: 'Ruhige Gewässer. Wenige, kleinere Bots mit langsamer Reaktion.',
-      botCount: 9,
+      botCount: 14,
       botMassMin: 60,
       botMassMax: 140,
       reactionMin: 0.5,
@@ -130,7 +161,7 @@
       label: 'NORMAL',
       color: '#3cf5c6',
       blurb: 'Die Standard-Arena. Ausbalancierte Jäger und vorsichtige Sammler.',
-      botCount: 13,
+      botCount: 20,
       botMassMin: 80,
       botMassMax: 200,
       reactionMin: 0.32,
@@ -148,7 +179,7 @@
       label: 'HARD',
       color: '#ffd75e',
       blurb: 'Erfahrene Schwärme. Schnellere Entscheidungen, größere Jäger.',
-      botCount: 16,
+      botCount: 26,
       botMassMin: 110,
       botMassMax: 300,
       reactionMin: 0.22,
@@ -166,7 +197,7 @@
       label: 'ULTRA',
       color: '#ff6079',
       blurb: 'Albtraum-Becken. Viele große Zellen, extreme Reaktion, kein Pardon.',
-      botCount: 20,
+      botCount: 34,
       botMassMin: 150,
       botMassMax: 420,
       reactionMin: 0.14,
@@ -188,6 +219,50 @@
   };
 
   const FOOD_COLORS = ['#5fffe0', '#c8ff66', '#ff7add', '#ffd95e', '#7fb4ff', '#b78cff', '#ff9a66'];
+
+  // Weighted pellet tiers: tiny for quick farming, medium for steady growth,
+  // and rare large pellets that are worth a risky detour.
+  const FOOD_TIERS = [
+    {
+      id: 'small',
+      weight: 0.68,
+      massMin: 1.2,
+      massMax: 2.4,
+      rMin: 3.1,
+      rMax: 4.4,
+      colors: ['#5fffe0', '#c8ff66', '#7fb4ff', '#ff9a66'],
+      glow: 0.09
+    },
+    {
+      id: 'medium',
+      weight: 0.26,
+      massMin: 5.4,
+      massMax: 8.2,
+      rMin: 5.2,
+      rMax: 6.9,
+      colors: FOOD_COLORS,
+      glow: 0.14
+    },
+    {
+      id: 'large',
+      weight: 0.06,
+      massMin: 30,
+      massMax: 48,
+      rMin: 10.5,
+      rMax: 13.8,
+      colors: ['#ffd75e', '#ff8f6b', '#8dffdd', '#ff7add'],
+      glow: 0.2
+    }
+  ];
+
+  const pickFoodTier = () => {
+    let roll = Math.random();
+    for (const tier of FOOD_TIERS) {
+      if (roll < tier.weight) return tier;
+      roll -= tier.weight;
+    }
+    return FOOD_TIERS[0];
+  };
 
   const BOT_NAMES = [
     'NEXUS', 'VORTEX', 'HELIX', 'ORBITA', 'KRYO', 'SPORE', 'VANTA', 'LUMEN',
@@ -438,6 +513,21 @@
       this.noise(0.16, 0.05, 1600);
     }
 
+    eject() {
+      this.tone(520, 310, 0.075, 'triangle', 0.045);
+    }
+
+    bigFood() {
+      this.tone(660, 1320, 0.14, 'sine', 0.07);
+      this.tone(990, 1760, 0.11, 'triangle', 0.035, 0.04);
+    }
+
+    virus() {
+      this.tone(140, 42, 0.42, 'sawtooth', 0.11);
+      this.noise(0.38, 0.13, 900);
+      this.tone(880, 220, 0.22, 'square', 0.035, 0.03);
+    }
+
     eatCell() {
       this.tone(180, 62, 0.28, 'sawtooth', 0.09);
       this.noise(0.26, 0.12, 700);
@@ -466,6 +556,7 @@
 
   let nextCellId = 1;
   let nextTeamId = 1;
+  let nextVirusId = 1;
 
   const skinColors = (skin) => ({
     a: skin.a,
@@ -494,6 +585,11 @@
       this.dead = false;
       this.phase = Math.random() * TAU;
       this.flash = 0;
+      this.squash = 0;
+      this.bumpX = 1;
+      this.bumpY = 0;
+      this.splitAnim = 0;
+      this.mergeGlow = 0;
     }
   }
 
@@ -508,6 +604,7 @@
     colors: skinColors(skin),
     speedMult: 1,
     spawnShield: 0,
+    splitCooldown: 0,
     brain: null,
     persona: null,
     ...extra
@@ -809,12 +906,36 @@
       this.targetCell = null;
       this.fleeFrom = [];
       this.wander = { x: rand(400, ARENA_SIZE - 400), y: rand(400, ARENA_SIZE - 400) };
+      this.patrol = { x: rand(400, ARENA_SIZE - 400), y: rand(400, ARENA_SIZE - 400) };
       this.dir = { x: Math.cos(rand(0, TAU)), y: Math.sin(rand(0, TAU)) };
+      this.splitTimer = rand(2.5, 6);
+      this.stuckTimer = 0;
+      this.lastX = 0;
+      this.lastY = 0;
+      this.mergeMode = false;
     }
 
     update(dt, game) {
-      const cell = this.team.cells[0];
-      if (!cell || cell.dead) return;
+      const cells = this.team.cells.filter((candidate) => !candidate.dead);
+      if (!cells.length) return;
+      const cell = cells.reduce((a, b) => (a.mass > b.mass ? a : b));
+      this.splitTimer = Math.max(0, this.splitTimer - dt);
+      const mergeReady = cells.length > 1 && cells.every((candidate) => candidate.mergeTimer <= 0);
+      this.mergeMode = mergeReady && this.state !== 'flee';
+
+      const moved = Math.hypot(cell.x - this.lastX, cell.y - this.lastY);
+      this.lastX = cell.x;
+      this.lastY = cell.y;
+      if (!this.mergeMode && moved < 5) this.stuckTimer += dt;
+      else this.stuckTimer = 0;
+      if (this.stuckTimer > 1.15) {
+        this.state = 'wander';
+        this.targetFood = null;
+        this.targetCell = null;
+        this.pickPatrol(cell, game);
+        this.stuckTimer = 0;
+        this.thinkTimer = Math.min(this.thinkTimer, 0.1);
+      }
 
       this.thinkTimer -= dt;
       if (this.thinkTimer <= 0) {
@@ -855,24 +976,79 @@
         const dx = this.targetFood.x - cell.x;
         const dy = this.targetFood.y - cell.y;
         const length = Math.hypot(dx, dy);
-        if (length > 3) dir = { x: dx / length, y: dy / length };
-      } else if (this.state === 'wander') {
-        const dx = this.wander.x - cell.x;
-        const dy = this.wander.y - cell.y;
-        const length = Math.hypot(dx, dy);
-        if (length > 90) dir = { x: dx / length, y: dy / length };
-        else {
-          this.state = 'forage';
-          this.thinkTimer = Math.min(this.thinkTimer, 0.1);
-        }
+        if (length > 8) dir = { x: dx / length, y: dy / length };
+        else this.targetFood = null;
       }
 
       if (!dir) {
-        dir = this.dir;
-        this.thinkTimer = Math.min(this.thinkTimer, 0.2);
+        const dx = this.patrol.x - cell.x;
+        const dy = this.patrol.y - cell.y;
+        const length = Math.hypot(dx, dy);
+        if (length > 70) {
+          dir = { x: dx / length, y: dy / length };
+          this.state = this.state === 'hunt' ? 'hunt' : 'wander';
+        } else {
+          this.pickPatrol(cell, game);
+          this.state = 'wander';
+          dir = { x: Math.cos(rand(0, TAU)), y: Math.sin(rand(0, TAU)) };
+        }
       }
 
+      this.tryTacticalSplit(game, cell);
+
       this.dir = this.steerAwayFromWalls(cell, dir);
+      this.dir = this.steerAwayFromSpikes(cell, this.dir, game.safeZones);
+    }
+
+    pickPatrol(cell, game) {
+      for (let attempt = 0; attempt < 14; attempt += 1) {
+        const angle = rand(0, TAU);
+        const range = rand(520, 1900);
+        const x = clamp(cell.x + Math.cos(angle) * range, 180, ARENA_SIZE - 180);
+        const y = clamp(cell.y + Math.sin(angle) * range, 180, ARENA_SIZE - 180);
+        if (game && cell.radius > SAFE_ZONE_ENTRY_RADIUS && game.safeZoneAt(x, y, 0)) continue;
+        this.patrol = { x, y };
+        return;
+      }
+      this.patrol = { x: rand(180, ARENA_SIZE - 180), y: rand(180, ARENA_SIZE - 180) };
+    }
+
+    tryTacticalSplit(game, cell) {
+      if (this.difficulty.id !== 'hard' && this.difficulty.id !== 'ultra') return;
+      if (this.state !== 'hunt' || !this.targetCell || this.targetCell.dead) return;
+      if (this.team.cells.length !== 1 || this.splitTimer > 0) return;
+      const minMass = this.difficulty.id === 'ultra' ? 190 : 235;
+      if (cell.mass < minMass) return;
+      const half = cell.mass / 2;
+      if (half <= this.targetCell.mass * EAT_RATIO) return;
+      const dx = this.targetCell.x - cell.x;
+      const dy = this.targetCell.y - cell.y;
+      const d = Math.hypot(dx, dy);
+      if (d > cell.radius + this.targetCell.radius + 330 || d < cell.radius * 0.3) return;
+      const length = d || 1;
+      if (game.splitTeam(this.team, { x: dx / length, y: dy / length })) {
+        this.splitTimer = rand(6.5, 10.5);
+      }
+    }
+
+    steerAwayFromSpikes(cell, dir, zones = []) {
+      if (cell.radius <= SAFE_ZONE_ENTRY_RADIUS) return dir;
+      let x = dir ? dir.x : 0;
+      let y = dir ? dir.y : 0;
+      for (const zone of zones) {
+        const dx = cell.x - zone.x;
+        const dy = cell.y - zone.y;
+        const d = Math.hypot(dx, dy);
+        const danger = zone.radius + zone.spikeSize + cell.radius * 0.2 + 150;
+        if (d < danger && d > 0.001) {
+          const force = (1 - d / danger) * 2.6;
+          x += (dx / d) * force;
+          y += (dy / d) * force;
+        }
+      }
+      const length = Math.hypot(x, y);
+      if (length < 0.0001) return dir || { x: 1, y: 0 };
+      return { x: x / length, y: y / length };
     }
 
     think(game, cell) {
@@ -899,7 +1075,9 @@
               nearestThreat = other;
             }
           } else if (cell.mass > other.mass * EAT_RATIO && d < vision * 0.92) {
-            const score = (other.mass / (d + 90)) * (0.7 + this.persona.aggression * 0.5);
+            const pressure = game.botTargetPressure ? game.botTargetPressure(other, this) : 0;
+            const affinity = 0.82 + ((((other.id * 37) + (this.team.id * 19)) % 100) / 100) * 0.36;
+            const score = (other.mass / (d + 90)) * (0.7 + this.persona.aggression * 0.5) * affinity / (1 + pressure * 0.85);
             if (score > bestPreyScore) {
               bestPreyScore = score;
               bestPrey = other;
@@ -929,12 +1107,17 @@
       }
 
       // 2. Keep a running hunt if the victim is still valid and visible.
+      // If too many bots already chase this target, let this one re-evaluate
+      // instead of joining a blind swarm.
       if (this.state === 'hunt' && this.targetCell && !this.targetCell.dead) {
         const d = dist(cell.x, cell.y, this.targetCell.x, this.targetCell.y);
+        const pressure = game.botTargetPressure ? game.botTargetPressure(this.targetCell, this) : 0;
         if (d < vision * 1.4 && cell.mass > this.targetCell.mass * EAT_RATIO) {
           if (!nearestThreat || nearestThreatDist > fleeRange * 0.9) {
-            this.fleeFrom = threats.slice(0, 2);
-            return;
+            if (pressure < 1.25 || !bestPrey || bestPrey === this.targetCell) {
+              this.fleeFrom = threats.slice(0, 2);
+              return;
+            }
           }
         }
       }
@@ -952,15 +1135,16 @@
         }
       }
 
-      // 4. Forage, with an occasional believable detour.
+      // 4. Forage, with an occasional believable detour. Bots always have a
+      // patrol destination, so they can never stand still waiting for prey.
       this.state = 'forage';
       this.targetCell = null;
       this.fleeFrom = [];
-      this.targetFood = game.findNearestFood(cell, vision * 1.8) || game.findNearestFood(cell, Infinity);
+      this.targetFood = game.findBestFood(cell, vision * 1.8) || game.findBestFood(cell, Infinity);
 
-      if (Math.random() < this.difficulty.mistake * 0.4) {
+      if (!this.targetFood || Math.random() < this.difficulty.mistake * 0.4) {
         this.state = 'wander';
-        this.wander = { x: rand(400, ARENA_SIZE - 400), y: rand(400, ARENA_SIZE - 400) };
+        this.pickPatrol(cell, game);
       }
     }
 
@@ -1012,6 +1196,10 @@
       this.teams = [];
       this.player = null;
       this.foods = [];
+      this.ejected = [];
+      this.viruses = [];
+      this.safeZones = this.createSafeZones();
+      this.ejectLock = 0;
       this.time = 0;
       this.kills = 0;
       this.maxMass = START_MASS;
@@ -1067,6 +1255,12 @@
         this.spawnBot(difficulty, true);
       }
 
+      // Viruses are fixed map hazards, placed after teams so they never spawn
+      // directly on top of a starting cell.
+      for (let i = 0; i < VIRUS_COUNT; i += 1) {
+        this.viruses.push(this.createVirus());
+      }
+
       this.foodGrid.rebuild(this.foods);
       this.camera.setViewport(this.camera.canvasW, this.camera.canvasH);
       this.camera.update(0, this, true);
@@ -1090,13 +1284,48 @@
       return this.state === 'playing' || this.state === 'dying';
     }
 
-    createFood(x, y) {
+    createSafeZones() {
+      return SAFE_ZONE_LAYOUT.map((zone, index) => ({
+        id: index,
+        x: zone.x,
+        y: zone.y,
+        radius: zone.radius,
+        entryRadius: SAFE_ZONE_ENTRY_RADIUS,
+        spikeSize: SAFE_ZONE_SPIKE_SIZE,
+        spikeCount: SAFE_ZONE_SPIKE_COUNT,
+        phase: index * 0.83
+      }));
+    }
+
+    safeZoneAt(x, y, margin = 0) {
+      for (const zone of this.safeZones) {
+        if (dist(x, y, zone.x, zone.y) < zone.radius - margin) return zone;
+      }
+      return null;
+    }
+
+    safeZoneForCell(cell, margin = 0) {
+      return this.safeZoneAt(cell.x, cell.y, margin);
+    }
+
+    isProtectedFromEater(victim, eater) {
+      if (victim.radius > SAFE_ZONE_ENTRY_RADIUS + 0.01) return false;
+      const zone = this.safeZoneAt(victim.x, victim.y, SAFE_ZONE_SPIKE_SIZE * 0.6);
+      if (!zone) return false;
+      const eaterZone = this.safeZoneAt(eater.x, eater.y, 0);
+      return eaterZone !== zone;
+    }
+
+    createFood(x, y, tierId) {
+      const tier = (tierId && FOOD_TIERS.find((candidate) => candidate.id === tierId)) || pickFoodTier();
       return {
         x,
         y,
-        r: rand(4.2, 6.8),
-        mass: rand(FOOD_MASS_MIN, FOOD_MASS_MAX),
-        color: pick(FOOD_COLORS),
+        r: rand(tier.rMin, tier.rMax),
+        mass: rand(tier.massMin, tier.massMax),
+        color: pick(tier.colors),
+        tier: tier.id,
+        tierGlow: tier.glow,
         phase: rand(0, TAU),
         active: true,
         respawnAt: 0
@@ -1104,11 +1333,14 @@
     }
 
     respawnFood(food) {
+      const tier = pickFoodTier();
       food.x = rand(50, ARENA_SIZE - 50);
       food.y = rand(50, ARENA_SIZE - 50);
-      food.r = rand(4.2, 6.8);
-      food.mass = rand(FOOD_MASS_MIN, FOOD_MASS_MAX);
-      food.color = pick(FOOD_COLORS);
+      food.r = rand(tier.rMin, tier.rMax);
+      food.mass = rand(tier.massMin, tier.massMax);
+      food.color = pick(tier.colors);
+      food.tier = tier.id;
+      food.tierGlow = tier.glow;
       food.phase = rand(0, TAU);
       food.active = true;
       food.respawnAt = 0;
@@ -1130,17 +1362,46 @@
       return best;
     }
 
+    findBestFood(cell, maxRange) {
+      let best = null;
+      let bestScore = -Infinity;
+      const rangeSq = maxRange === Infinity ? Infinity : maxRange * maxRange;
+      for (const food of this.foods) {
+        if (!food.active) continue;
+        if (cell.radius > SAFE_ZONE_ENTRY_RADIUS && this.safeZoneAt(food.x, food.y, 0)) continue;
+        const dx = food.x - cell.x;
+        const dy = food.y - cell.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > rangeSq) continue;
+        const d = Math.sqrt(d2);
+        const tierValue = food.tier === 'large' ? 1.55 : food.tier === 'medium' ? 1.05 : 0.82;
+        const score = (food.mass * tierValue) / (d + 85) + (food.tier === 'large' ? 0.08 : 0);
+        if (score > bestScore) {
+          bestScore = score;
+          best = food;
+        }
+      }
+      return best;
+    }
+
     pickSpawnPoint(minPlayerDistance, minCellDistance) {
       let best = { x: rand(300, ARENA_SIZE - 300), y: rand(300, ARENA_SIZE - 300) };
       let bestClearance = -1;
 
-      for (let attempt = 0; attempt < 60; attempt += 1) {
+      for (let attempt = 0; attempt < 80; attempt += 1) {
         const x = rand(280, ARENA_SIZE - 280);
         const y = rand(280, ARENA_SIZE - 280);
         let clearance = Infinity;
         let valid = true;
 
-        if (this.player) {
+        for (const zone of this.safeZones) {
+          if (dist(x, y, zone.x, zone.y) < zone.radius + 210) {
+            valid = false;
+            break;
+          }
+        }
+
+        if (valid && this.player) {
           for (const cell of this.player.cells) {
             const d = dist(x, y, cell.x, cell.y) - cell.radius;
             clearance = Math.min(clearance, d);
@@ -1173,6 +1434,53 @@
       }
 
       return best;
+    }
+
+    pickVirusSpawnPoint() {
+      let fallback = { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2 };
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        const x = rand(260, ARENA_SIZE - 260);
+        const y = rand(260, ARENA_SIZE - 260);
+        fallback = { x, y };
+        if (this.safeZones.some((zone) => dist(x, y, zone.x, zone.y) < zone.radius + 160)) continue;
+        let blocked = false;
+        for (const team of this.teams) {
+          for (const cell of team.cells) {
+            if (dist(x, y, cell.x, cell.y) < cell.radius + VIRUS_RADIUS + 180) {
+              blocked = true;
+              break;
+            }
+          }
+          if (blocked) break;
+        }
+        if (!blocked) return { x, y };
+      }
+      return fallback;
+    }
+
+    createVirus() {
+      const spawn = this.pickVirusSpawnPoint();
+      return {
+        id: nextVirusId++,
+        x: spawn.x,
+        y: spawn.y,
+        radius: VIRUS_RADIUS,
+        active: true,
+        respawnAt: 0,
+        phase: rand(0, TAU),
+        rotation: rand(0, TAU),
+        pulse: 0
+      };
+    }
+
+    placeVirus(virus) {
+      const spawn = this.pickVirusSpawnPoint();
+      virus.x = spawn.x;
+      virus.y = spawn.y;
+      virus.active = true;
+      virus.respawnAt = 0;
+      virus.rotation = rand(0, TAU);
+      virus.pulse = 0;
     }
 
     uniqueBotName() {
@@ -1234,6 +1542,16 @@
         }
       }
       return cells;
+    }
+
+    botTargetPressure(target, excludeBrain = null) {
+      if (!target || target.dead) return 0;
+      let pressure = 0;
+      for (const team of this.teams) {
+        if (team.isPlayer || !team.brain || team.brain === excludeBrain) continue;
+        if (team.brain.state === 'hunt' && team.brain.targetCell === target) pressure += 1;
+      }
+      return pressure;
     }
 
     teamMass(team) {
@@ -1300,6 +1618,7 @@
 
       this.time += dt;
       this.splitLock = Math.max(0, this.splitLock - dt);
+      this.ejectLock = Math.max(0, this.ejectLock - dt);
       if (this.player.spawnShield > 0) {
         this.player.spawnShield = Math.max(0, this.player.spawnShield - dt);
       }
@@ -1309,16 +1628,22 @@
       }
 
       this.processRespawnQueue();
+      this.updateViruses(dt);
+      this.updateEjected(dt);
 
       // Pointer intent is recomputed once per fixed step.
       const pointerInput = this.getPointerIntent();
 
       for (const team of this.teams) {
         if (!team.cells.length || !team.alive) continue;
+        if (team.splitCooldown > 0) team.splitCooldown = Math.max(0, team.splitCooldown - dt);
+        for (const cell of team.cells) {
+          if (cell.dead) continue;
+          if (cell.mergeTimer > 0) cell.mergeTimer = Math.max(0, cell.mergeTimer - dt);
+        }
         if (team.isPlayer) {
           for (const cell of team.cells) {
             if (cell.dead) continue;
-            if (cell.mergeTimer > 0) cell.mergeTimer = Math.max(0, cell.mergeTimer - dt);
             let dir = pointerInput.keyboard;
             if (!dir) {
               const dx = pointerInput.world.x - cell.x;
@@ -1335,23 +1660,44 @@
           }
         } else if (team.brain) {
           team.brain.update(dt, this);
-          for (const cell of team.cells) {
-            if (cell.dead) continue;
-            this.moveCell(cell, team.brain.dir, dt);
+          if (team.brain.mergeMode) {
+            let total = 0;
+            let sx = 0;
+            let sy = 0;
+            for (const cell of team.cells) {
+              if (cell.dead) continue;
+              total += cell.mass;
+              sx += cell.x * cell.mass;
+              sy += cell.y * cell.mass;
+            }
+            const centerX = sx / Math.max(1, total);
+            const centerY = sy / Math.max(1, total);
+            for (const cell of team.cells) {
+              if (cell.dead) continue;
+              const dx = centerX - cell.x;
+              const dy = centerY - cell.y;
+              const length = Math.hypot(dx, dy);
+              this.moveCell(cell, length > 7 ? { x: dx / length, y: dy / length } : null, dt);
+            }
+          } else {
+            for (const cell of team.cells) {
+              if (cell.dead) continue;
+              this.moveCell(cell, team.brain.dir, dt);
+            }
           }
         }
       }
 
-      this.updateOwnCellInteractions(dt);
+      this.updateTeamCellInteractions(dt);
 
       // Food collisions
       this.foodGrid.rebuild(this.foods);
       const cells = this.activeCells();
       for (const cell of cells) {
         if (cell.dead) continue;
-        this.foodGrid.forEachNear(cell.x, cell.y, cell.radius + 12, (food) => {
+        this.foodGrid.forEachNear(cell.x, cell.y, cell.radius + 18, (food) => {
           if (!food.active || cell.dead) return;
-          const pickupDistance = cell.radius + food.r * 0.35;
+          const pickupDistance = cell.radius + food.r * 0.45;
           if (dist2(cell.x, cell.y, food.x, food.y) <= pickupDistance * pickupDistance) {
             this.collectFood(cell, food);
           }
@@ -1364,6 +1710,8 @@
       this.preDeathRank = this.playerRank();
 
       this.handleCellCollisions();
+      this.handleVirusCollisions();
+      this.handleEjectedCollisions();
       this.cleanupDeadCells();
       this.syncRadii();
 
@@ -1403,6 +1751,8 @@
       cell.vx += (targetVx - cell.vx) * Math.min(1, responsiveness * dt);
       cell.vy += (targetVy - cell.vy) * Math.min(1, responsiveness * dt);
 
+      const prevX = cell.x;
+      const prevY = cell.y;
       const dx = (cell.vx + cell.launchVx) * dt;
       const dy = (cell.vy + cell.launchVy) * dt;
       cell.x += dx;
@@ -1430,85 +1780,136 @@
         if (cell.vy > 0) cell.vy = 0;
         if (cell.launchVy > 0) cell.launchVy = 0;
       }
+
+      this.resolveSafeZoneCollision(cell, prevX, prevY);
     }
 
-    updateOwnCellInteractions(dt) {
-      if (!this.player) return;
-      const cells = this.player.cells;
-      for (let i = 0; i < cells.length; i += 1) {
-        const a = cells[i];
-        if (a.dead) continue;
-        for (let j = i + 1; j < cells.length; j += 1) {
-          const b = cells[j];
-          if (b.dead) continue;
-          const d = dist(a.x, a.y, b.x, b.y);
-          if (d <= 0.001) continue;
-
-          if (a.mergeTimer <= 0 && b.mergeTimer <= 0 && d < (a.radius + b.radius) * 0.58) {
-            const big = a.mass >= b.mass ? a : b;
-            const small = big === a ? b : a;
-            const total = big.mass + small.mass;
-            big.x = (big.x * big.mass + small.x * small.mass) / total;
-            big.y = (big.y * big.mass + small.y * small.mass) / total;
-            big.mass = Math.min(MAX_CELL_MASS, total);
-            big.mergeTimer = 0;
-            big.flash = Math.max(big.flash, 0.35);
-            small.dead = true;
-            if (this.particles.enabled) {
-              this.particles.burst(small.x, small.y, [big.team.colors.a, big.team.colors.glow], 6, {
-                speedMin: 15,
-                speedMax: 70,
-                sizeMin: 1,
-                sizeMax: 3,
-                lifeMin: 0.25,
-                lifeMax: 0.55
-              });
-            }
-            continue;
+    resolveSafeZoneCollision(cell, prevX, prevY) {
+      if (cell.radius <= SAFE_ZONE_ENTRY_RADIUS + 0.01) return;
+      for (const zone of this.safeZones) {
+        const dx = cell.x - zone.x;
+        const dy = cell.y - zone.y;
+        const d = Math.hypot(dx, dy);
+        if (d < 0.001) continue;
+        const barrier = zone.radius + zone.spikeSize + cell.radius * 0.12;
+        const prevD = Math.hypot(prevX - zone.x, prevY - zone.y);
+        if (d < barrier && prevD >= barrier - 1.5) {
+          const nx = dx / d;
+          const ny = dy / d;
+          cell.x = zone.x + nx * barrier;
+          cell.y = zone.y + ny * barrier;
+          const radialVelocity = cell.vx * nx + cell.vy * ny;
+          if (radialVelocity < 0) {
+            cell.vx -= nx * radialVelocity;
+            cell.vy -= ny * radialVelocity;
           }
-
-          const minDistance = (a.radius + b.radius) * 0.88;
-          if (d < minDistance) {
-            const overlap = minDistance - d;
-            const nx = (b.x - a.x) / d;
-            const ny = (b.y - a.y) / d;
-            const total = Math.max(1, a.mass + b.mass);
-            const push = overlap * Math.min(1, dt * 7) * 0.5;
-            a.x -= nx * push * (b.mass / total);
-            a.y -= ny * push * (b.mass / total);
-            b.x += nx * push * (a.mass / total);
-            b.y += ny * push * (a.mass / total);
-          }
+          cell.squash = Math.max(cell.squash, 0.55);
+          cell.bumpX = nx;
+          cell.bumpY = ny;
         }
       }
-      this.player.cells = cells.filter((cell) => !cell.dead);
+    }
+
+    updateTeamCellInteractions(dt) {
+      for (const team of this.teams) {
+        const cells = team.cells;
+        if (cells.length < 2) continue;
+        for (let i = 0; i < cells.length; i += 1) {
+          const a = cells[i];
+          if (a.dead) continue;
+          for (let j = i + 1; j < cells.length; j += 1) {
+            const b = cells[j];
+            if (b.dead) continue;
+            const d = dist(a.x, a.y, b.x, b.y);
+            if (d <= 0.001) continue;
+
+            if (a.mergeTimer <= 0 && b.mergeTimer <= 0 && d < (a.radius + b.radius) * 0.58) {
+              const big = a.mass >= b.mass ? a : b;
+              const small = big === a ? b : a;
+              const total = big.mass + small.mass;
+              const nx = (small.x - big.x) / d;
+              const ny = (small.y - big.y) / d;
+              big.x = (big.x * big.mass + small.x * small.mass) / total;
+              big.y = (big.y * big.mass + small.y * small.mass) / total;
+              big.mass = Math.min(MAX_CELL_MASS, total);
+              big.mergeTimer = 0;
+              big.flash = Math.max(big.flash, 0.35);
+              big.mergeGlow = 1;
+              big.squash = Math.max(big.squash, 0.7);
+              big.bumpX = nx;
+              big.bumpY = ny;
+              small.dead = true;
+              if (this.particles.enabled) {
+                this.particles.burst(small.x, small.y, [big.team.colors.a, big.team.colors.glow], 8, {
+                  speedMin: 15,
+                  speedMax: 90,
+                  sizeMin: 1,
+                  sizeMax: 3.5,
+                  lifeMin: 0.25,
+                  lifeMax: 0.65
+                });
+              }
+              continue;
+            }
+
+            const minDistance = (a.radius + b.radius) * 0.88;
+            if (d < minDistance) {
+              const overlap = minDistance - d;
+              const nx = (b.x - a.x) / d;
+              const ny = (b.y - a.y) / d;
+              const total = Math.max(1, a.mass + b.mass);
+              const push = overlap * Math.min(1, dt * 7) * 0.5;
+              a.x -= nx * push * (b.mass / total);
+              a.y -= ny * push * (b.mass / total);
+              b.x += nx * push * (a.mass / total);
+              b.y += ny * push * (a.mass / total);
+              a.squash = Math.max(a.squash, Math.min(0.5, overlap / Math.max(1, minDistance)));
+              b.squash = Math.max(b.squash, Math.min(0.5, overlap / Math.max(1, minDistance)));
+              a.bumpX = -nx;
+              a.bumpY = -ny;
+              b.bumpX = nx;
+              b.bumpY = ny;
+            }
+          }
+        }
+        team.cells = cells.filter((cell) => !cell.dead);
+      }
     }
 
     collectFood(cell, food) {
       if (!food.active) return;
+      const isLarge = food.tier === 'large' || food.mass >= 20;
       food.active = false;
-      food.respawnAt = this.time + rand(0.5, 2.6);
+      food.respawnAt = this.time + (isLarge ? rand(2.2, 4.6) : rand(0.5, 2.4));
       cell.mass = Math.min(MAX_CELL_MASS, cell.mass + food.mass);
+      cell.flash = Math.max(cell.flash, isLarge ? 0.45 : 0.18);
+      cell.squash = Math.max(cell.squash, isLarge ? 0.28 : 0.08);
       if (cell.team.isPlayer) {
-        this.audio.food();
+        if (isLarge) this.audio.bigFood();
+        else this.audio.food();
         if (this.particles.enabled) {
-          this.particles.burst(food.x, food.y, [food.color, cell.team.colors.a], 3, {
-            speedMin: 15,
-            speedMax: 65,
-            sizeMin: 1,
-            sizeMax: 2.6,
-            lifeMin: 0.25,
-            lifeMax: 0.55
+          this.particles.burst(food.x, food.y, [food.color, cell.team.colors.a, '#ffffff'], isLarge ? 16 : 3, {
+            speedMin: isLarge ? 40 : 15,
+            speedMax: isLarge ? 190 : 65,
+            sizeMin: isLarge ? 1.4 : 1,
+            sizeMax: isLarge ? 4.6 : 2.6,
+            lifeMin: isLarge ? 0.35 : 0.25,
+            lifeMax: isLarge ? 0.9 : 0.55
           });
         }
-      } else if (this.particles.enabled && Math.random() < 0.15) {
-        this.particles.burst(food.x, food.y, [food.color], 2, {
+        if (isLarge) {
+          this.addRing(food.x, food.y, food.color, 70, 0.55);
+          this.addFloatText(food.x, food.y - 18, `+${formatNumber(food.mass)}`, food.color);
+          this.addShake(1.1);
+        }
+      } else if (this.particles.enabled && (isLarge || Math.random() < 0.15)) {
+        this.particles.burst(food.x, food.y, [food.color], isLarge ? 8 : 2, {
           speedMin: 10,
-          speedMax: 45,
+          speedMax: isLarge ? 110 : 45,
           sizeMin: 0.8,
-          sizeMax: 1.8,
+          sizeMax: isLarge ? 3 : 1.8,
           lifeMin: 0.2,
-          lifeMax: 0.45
+          lifeMax: isLarge ? 0.65 : 0.45
         });
       }
     }
@@ -1524,31 +1925,60 @@
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const d = Math.hypot(dx, dy);
+          const aShielded = a.team.isPlayer && a.team.spawnShield > 0;
+          const bShielded = b.team.isPlayer && b.team.spawnShield > 0;
+          const aCanEat = !bShielded && a.mass > b.mass * EAT_RATIO && !this.isProtectedFromEater(b, a);
+          const bCanEat = !aShielded && b.mass > a.mass * EAT_RATIO && !this.isProtectedFromEater(a, b);
+
           if (d <= 0.0001) {
-            if (a.mass > b.mass * EAT_RATIO) this.consumeCell(a, b);
-            else if (b.mass > a.mass * EAT_RATIO) this.consumeCell(b, a);
+            if (aCanEat) this.consumeCell(a, b);
+            else if (bCanEat) this.consumeCell(b, a);
             continue;
           }
 
-          const aShielded = a.team.isPlayer && a.team.spawnShield > 0;
-          const bShielded = b.team.isPlayer && b.team.spawnShield > 0;
-          const aEatsB = !bShielded && a.mass > b.mass * EAT_RATIO && d < a.radius - b.radius * 0.25;
-          const bEatsA = !aShielded && b.mass > a.mass * EAT_RATIO && d < b.radius - a.radius * 0.25;
-
-          if (aEatsB) {
+          // A victim's centre only needs to be near the predator's membrane.
+          // This is intentionally more forgiving than the old strict
+          // "centre deeply inside" test, and the suction below removes the
+          // frustrating bounce that used to push prey away just before a bite.
+          const aCapture = a.radius + b.radius * EAT_CAPTURE_PAD;
+          const bCapture = b.radius + a.radius * EAT_CAPTURE_PAD;
+          if (aCanEat && d < aCapture) {
             this.consumeCell(a, b);
             continue;
           }
-          if (bEatsA) {
+          if (bCanEat && d < bCapture) {
             this.consumeCell(b, a);
+            continue;
+          }
+
+          const nx = dx / d;
+          const ny = dy / d;
+          if (aCanEat && d < a.radius + b.radius * EAT_SUCTION_PAD) {
+            const pull = Math.min(3.4, (a.radius + b.radius * EAT_SUCTION_PAD - d) * 0.075);
+            b.x -= nx * pull;
+            b.y -= ny * pull;
+            b.vx *= 0.9;
+            b.vy *= 0.9;
+            b.squash = Math.max(b.squash, 0.35);
+            b.bumpX = -nx;
+            b.bumpY = -ny;
+            continue;
+          }
+          if (bCanEat && d < b.radius + a.radius * EAT_SUCTION_PAD) {
+            const pull = Math.min(3.4, (b.radius + a.radius * EAT_SUCTION_PAD - d) * 0.075);
+            a.x += nx * pull;
+            a.y += ny * pull;
+            a.vx *= 0.9;
+            a.vy *= 0.9;
+            a.squash = Math.max(a.squash, 0.35);
+            a.bumpX = nx;
+            a.bumpY = ny;
             continue;
           }
 
           const minDistance = (a.radius + b.radius) * 0.86;
           if (d < minDistance) {
             const overlap = minDistance - d;
-            const nx = dx / d;
-            const ny = dy / d;
             const total = Math.max(1, a.mass + b.mass);
             const push = overlap * 0.35;
             a.x -= nx * push * (b.mass / total);
@@ -1559,6 +1989,12 @@
             a.y = clamp(a.y, a.radius, ARENA_SIZE - a.radius);
             b.x = clamp(b.x, b.radius, ARENA_SIZE - b.radius);
             b.y = clamp(b.y, b.radius, ARENA_SIZE - b.radius);
+            a.squash = Math.max(a.squash, Math.min(0.45, overlap / Math.max(1, minDistance)));
+            b.squash = Math.max(b.squash, Math.min(0.45, overlap / Math.max(1, minDistance)));
+            a.bumpX = -nx;
+            a.bumpY = -ny;
+            b.bumpX = nx;
+            b.bumpY = ny;
           }
         }
       }
@@ -1567,11 +2003,18 @@
     consumeCell(eater, victim) {
       if (eater.dead || victim.dead) return;
       const victimMass = victim.mass;
+      const dx = victim.x - eater.x;
+      const dy = victim.y - eater.y;
+      const length = Math.hypot(dx, dy) || 1;
       eater.mass = Math.min(MAX_CELL_MASS, eater.mass + victimMass);
+      victim.mass = 0;
       victim.dead = true;
       victim.team.lastCellPosition = { x: victim.x, y: victim.y };
       eater.team.kills += 1;
       eater.flash = 1;
+      eater.squash = Math.max(eater.squash, 0.85);
+      eater.bumpX = dx / length;
+      eater.bumpY = dy / length;
 
       if (eater.team.isPlayer) {
         this.audio.eatCell();
@@ -1614,6 +2057,232 @@
       }
     }
 
+    updateViruses(dt) {
+      for (const virus of this.viruses) {
+        virus.rotation += dt * 0.35;
+        virus.pulse = Math.max(0, virus.pulse - dt * 2.4);
+        if (!virus.active && this.time >= virus.respawnAt) this.placeVirus(virus);
+      }
+    }
+
+    updateEjected(dt) {
+      for (let i = this.ejected.length - 1; i >= 0; i -= 1) {
+        const pellet = this.ejected[i];
+        pellet.age += dt;
+        if (pellet.age >= pellet.life) {
+          this.ejected.splice(i, 1);
+          continue;
+        }
+        pellet.x += pellet.vx * dt;
+        pellet.y += pellet.vy * dt;
+        const damping = Math.exp(-2.6 * dt);
+        pellet.vx *= damping;
+        pellet.vy *= damping;
+        const r = pellet.r;
+        if (pellet.x < r || pellet.x > ARENA_SIZE - r) {
+          pellet.vx *= -0.55;
+          pellet.x = clamp(pellet.x, r, ARENA_SIZE - r);
+        }
+        if (pellet.y < r || pellet.y > ARENA_SIZE - r) {
+          pellet.vy *= -0.55;
+          pellet.y = clamp(pellet.y, r, ARENA_SIZE - r);
+        }
+      }
+    }
+
+    handleEjectedCollisions() {
+      if (!this.ejected.length) return;
+      const cells = this.activeCells();
+      for (let i = this.ejected.length - 1; i >= 0; i -= 1) {
+        const pellet = this.ejected[i];
+        if (pellet.age < 0.12) continue;
+        let eaten = false;
+        for (const cell of cells) {
+          if (cell.dead) continue;
+          if (pellet.owner === cell.team.id && this.time < pellet.ignoreUntil) continue;
+          const pickup = cell.radius + pellet.r * 0.9;
+          if (dist2(cell.x, cell.y, pellet.x, pellet.y) > pickup * pickup) continue;
+          cell.mass = Math.min(MAX_CELL_MASS, cell.mass + pellet.mass);
+          cell.flash = Math.max(cell.flash, 0.2);
+          cell.squash = Math.max(cell.squash, 0.18);
+          if (cell.team.isPlayer) {
+            this.audio.food();
+            if (this.particles.enabled) {
+              this.particles.burst(pellet.x, pellet.y, [cell.team.colors.a, '#ffffff'], 4, {
+                speedMin: 20,
+                speedMax: 80,
+                sizeMin: 1,
+                sizeMax: 2.8,
+                lifeMin: 0.2,
+                lifeMax: 0.5
+              });
+            }
+          } else if (this.particles.enabled && Math.random() < 0.3) {
+            this.particles.burst(pellet.x, pellet.y, [cell.team.colors.a], 2, {
+              speedMin: 10,
+              speedMax: 45,
+              sizeMin: 0.8,
+              sizeMax: 2,
+              lifeMin: 0.2,
+              lifeMax: 0.4
+            });
+          }
+          eaten = true;
+          break;
+        }
+        if (eaten) this.ejected.splice(i, 1);
+      }
+    }
+
+    handleVirusCollisions() {
+      const cells = this.activeCells();
+      for (const cell of cells) {
+        if (cell.dead) continue;
+        for (const virus of this.viruses) {
+          if (!virus.active) continue;
+          const dx = cell.x - virus.x;
+          const dy = cell.y - virus.y;
+          const d = Math.hypot(dx, dy);
+          const touch = cell.radius + virus.radius * 0.52;
+          if (d >= touch) continue;
+          if (cell.mass >= VIRUS_POP_MASS && !(cell.team.isPlayer && cell.team.spawnShield > 0)) {
+            this.popVirus(cell, virus);
+            continue;
+          }
+          const nx = d > 0.001 ? dx / d : 1;
+          const ny = d > 0.001 ? dy / d : 0;
+          const overlap = touch - d;
+          cell.x += nx * overlap * 0.7;
+          cell.y += ny * overlap * 0.7;
+          cell.vx += nx * 38;
+          cell.vy += ny * 38;
+          cell.squash = Math.max(cell.squash, 0.4);
+          cell.bumpX = nx;
+          cell.bumpY = ny;
+          cell.x = clamp(cell.x, cell.radius, ARENA_SIZE - cell.radius);
+          cell.y = clamp(cell.y, cell.radius, ARENA_SIZE - cell.radius);
+        }
+      }
+    }
+
+    popVirus(cell, virus) {
+      if (!virus.active || cell.dead) return;
+      virus.active = false;
+      virus.respawnAt = this.time + rand(VIRUS_RESPAWN_MIN, VIRUS_RESPAWN_MAX);
+      virus.pulse = 1;
+      const team = cell.team;
+      const liveCount = team.cells.filter((candidate) => !candidate.dead).length;
+      const slots = Math.max(0, MAX_PLAYER_CELLS - liveCount);
+      const pieces = Math.min(3, slots, Math.max(0, Math.floor(cell.mass / 48)));
+      if (pieces > 0) {
+        const pieceMass = cell.mass / (pieces + 1);
+        const mergeTime = MERGE_BASE_TIME + Math.sqrt(pieceMass) * 0.2;
+        cell.mass = pieceMass;
+        cell.radius = massToRadius(pieceMass);
+        cell.mergeTimer = mergeTime;
+        cell.mergeTotal = mergeTime;
+        cell.flash = 1;
+        cell.splitAnim = 1;
+        cell.squash = 1;
+        cell.bumpX = 1;
+        cell.bumpY = 0;
+        for (let i = 0; i < pieces; i += 1) {
+          const angle = (i / pieces) * TAU + rand(-0.18, 0.18);
+          const nx = Math.cos(angle);
+          const ny = Math.sin(angle);
+          const newCell = new Cell(team, cell.x + nx * cell.radius * 0.8, cell.y + ny * cell.radius * 0.8, pieceMass);
+          newCell.aimX = nx;
+          newCell.aimY = ny;
+          newCell.mergeTimer = mergeTime;
+          newCell.mergeTotal = mergeTime;
+          newCell.launchVx = nx * SPLIT_LAUNCH_SPEED * 0.9;
+          newCell.launchVy = ny * SPLIT_LAUNCH_SPEED * 0.9;
+          newCell.flash = 1;
+          newCell.splitAnim = 1;
+          newCell.squash = 1;
+          newCell.bumpX = nx;
+          newCell.bumpY = ny;
+          team.cells.push(newCell);
+        }
+      }
+      team.splitCooldown = Math.max(team.splitCooldown, 0.8);
+      this.addRing(virus.x, virus.y, '#b6ff5c', virus.radius * 3.2, 0.8);
+      this.addShake(team.isPlayer ? 5 : 2);
+      if (this.particles.enabled) {
+        this.particles.burst(virus.x, virus.y, ['#b6ff5c', '#e9ff9a', team.colors.a], 28, {
+          speedMin: 50,
+          speedMax: 260,
+          sizeMin: 1.2,
+          sizeMax: 4.8,
+          lifeMin: 0.4,
+          lifeMax: 1.1
+        });
+      }
+      if (team.isPlayer) {
+        this.audio.virus();
+        this.addFloatText(cell.x, cell.y - cell.radius, 'VIRUS-POP', '#d7ff7a');
+        this.callbacks.onEvent?.('virus-pop');
+      }
+    }
+
+    ejectMass() {
+      if (this.state !== 'playing' || !this.player || this.ejectLock > 0) return false;
+      const cells = this.player.cells.filter((cell) => !cell.dead && cell.mass > EJECT_MIN_CELL_MASS);
+      if (!cells.length) return false;
+      let didEject = false;
+      for (const cell of cells) {
+        let dirX = cell.aimX;
+        let dirY = cell.aimY;
+        let length = Math.hypot(dirX, dirY);
+        if (length < 0.001) {
+          const pointer = this.pointerWorld || { x: cell.x + 1, y: cell.y };
+          dirX = pointer.x - cell.x;
+          dirY = pointer.y - cell.y;
+          length = Math.hypot(dirX, dirY) || 1;
+        }
+        dirX /= length;
+        dirY /= length;
+        const spawnDistance = cell.radius + 8;
+        cell.mass = Math.max(1, cell.mass - EJECT_COST);
+        cell.radius = massToRadius(cell.mass);
+        cell.squash = Math.max(cell.squash, 0.42);
+        cell.bumpX = dirX;
+        cell.bumpY = dirY;
+        cell.flash = Math.max(cell.flash, 0.25);
+        this.ejected.push({
+          x: cell.x + dirX * spawnDistance,
+          y: cell.y + dirY * spawnDistance,
+          vx: dirX * EJECT_SPEED + cell.vx * 0.25,
+          vy: dirY * EJECT_SPEED + cell.vy * 0.25,
+          r: 5.5,
+          mass: EJECT_MASS,
+          age: 0,
+          life: 3.2,
+          owner: cell.team.id,
+          ignoreUntil: this.time + EJECT_OWNER_GRACE,
+          phase: rand(0, TAU)
+        });
+        didEject = true;
+      }
+      if (didEject) {
+        this.ejectLock = EJECT_COOLDOWN;
+        this.audio.eject();
+        if (this.particles.enabled) {
+          const largest = cells.reduce((a, b) => (a.mass > b.mass ? a : b));
+          this.particles.burst(largest.x, largest.y, [this.player.colors.a, '#ffffff'], 5, {
+            speedMin: 20,
+            speedMax: 90,
+            sizeMin: 0.8,
+            sizeMax: 2.4,
+            lifeMin: 0.15,
+            lifeMax: 0.4
+          });
+        }
+      }
+      if (this.ejected.length > MAX_EJECTED) this.ejected.splice(0, this.ejected.length - MAX_EJECTED);
+      return didEject;
+    }
+
     cleanupDeadCells() {
       const playerCellsBefore = this.player ? this.player.cells.length : 0;
       for (const team of this.teams) {
@@ -1640,13 +2309,12 @@
       }
     }
 
-    splitPlayer() {
-      if (this.state !== 'playing' || !this.player) return;
-      if (this.splitLock > 0) return;
-      const cells = this.player.cells.filter((cell) => !cell.dead && cell.mass >= MIN_SPLIT_MASS);
-      if (!cells.length) return;
-      let slots = MAX_PLAYER_CELLS - this.player.cells.length;
-      if (slots <= 0) return;
+    splitTeam(team, dirOverride = null) {
+      if (!team || team.cells.length >= MAX_PLAYER_CELLS) return false;
+      const cells = team.cells.filter((cell) => !cell.dead && cell.mass >= MIN_SPLIT_MASS);
+      if (!cells.length) return false;
+      let slots = MAX_PLAYER_CELLS - team.cells.length;
+      if (slots <= 0) return false;
 
       cells.sort((a, b) => b.mass - a.mass);
       let didSplit = false;
@@ -1654,17 +2322,25 @@
         if (slots <= 0) break;
         if (cell.mass < MIN_SPLIT_MASS) continue;
         const half = cell.mass / 2;
-        const dirLength = Math.hypot(cell.aimX, cell.aimY) || 1;
-        const dirX = cell.aimX / dirLength;
-        const dirY = cell.aimY / dirLength;
+        const aimLength = Math.hypot(cell.aimX, cell.aimY) || 1;
+        const overrideLength = dirOverride ? Math.hypot(dirOverride.x, dirOverride.y) || 1 : 0;
+        const dirX = dirOverride ? dirOverride.x / overrideLength : cell.aimX / aimLength;
+        const dirY = dirOverride ? dirOverride.y / overrideLength : cell.aimY / aimLength;
         const mergeTime = MERGE_BASE_TIME + Math.sqrt(half) * 0.18;
+        const halfRadius = massToRadius(half);
         cell.mass = half;
+        cell.radius = halfRadius;
         cell.mergeTimer = mergeTime;
         cell.mergeTotal = mergeTime;
         cell.flash = 1;
+        cell.splitAnim = 1;
+        cell.squash = 1;
+        cell.bumpX = dirX;
+        cell.bumpY = dirY;
         cell.launchVx += dirX * 240;
+        cell.launchVy += dirY * 240;
 
-        const newCell = new Cell(cell.team, cell.x + dirX * (cell.radius * 0.55), cell.y + dirY * (cell.radius * 0.55), half);
+        const newCell = new Cell(team, cell.x + dirX * (halfRadius * 0.7), cell.y + dirY * (halfRadius * 0.7), half);
         newCell.aimX = dirX;
         newCell.aimY = dirY;
         newCell.mergeTimer = mergeTime;
@@ -1672,12 +2348,16 @@
         newCell.launchVx = dirX * SPLIT_LAUNCH_SPEED;
         newCell.launchVy = dirY * SPLIT_LAUNCH_SPEED;
         newCell.flash = 1;
-        this.player.cells.push(newCell);
+        newCell.splitAnim = 1;
+        newCell.squash = 1;
+        newCell.bumpX = dirX;
+        newCell.bumpY = dirY;
+        team.cells.push(newCell);
         slots -= 1;
         didSplit = true;
 
         if (this.particles.enabled) {
-          this.particles.burst(cell.x, cell.y, [this.player.colors.a, this.player.colors.glow], 14, {
+          this.particles.burst(cell.x, cell.y, [team.colors.a, team.colors.glow], 14, {
             speedMin: 30,
             speedMax: 170,
             sizeMin: 1,
@@ -1686,14 +2366,25 @@
             lifeMax: 0.75
           });
         }
-        this.addRing(cell.x, cell.y, this.player.colors.glow, cell.radius * 3.2, 0.4);
+        this.addRing(cell.x, cell.y, team.colors.glow, halfRadius * 3.2, 0.4);
       }
 
       if (didSplit) {
-        this.splitLock = SPLIT_COOLDOWN;
-        this.audio.split();
-        this.addShake(2.2);
+        if (team.isPlayer) {
+          this.splitLock = SPLIT_COOLDOWN;
+          this.audio.split();
+          this.addShake(2.2);
+        } else {
+          team.splitCooldown = Math.max(team.splitCooldown, 4.5);
+        }
       }
+      return didSplit;
+    }
+
+    splitPlayer() {
+      if (this.state !== 'playing' || !this.player) return false;
+      if (this.splitLock > 0) return false;
+      return this.splitTeam(this.player);
     }
 
     addShake(amount) {
@@ -1809,6 +2500,13 @@
         playerCells: this.player ? this.player.cells.length : 0,
         botTeams: this.teams.filter((team) => !team.isPlayer && team.cells.length).length,
         foodsActive: this.foods.filter((food) => food.active).length,
+        foodTiers: this.foods.reduce((counts, food) => {
+          if (food.active) counts[food.tier] = (counts[food.tier] || 0) + 1;
+          return counts;
+        }, {}),
+        safeZones: this.safeZones.length,
+        virusesActive: this.viruses.filter((virus) => virus.active).length,
+        ejectedMass: this.ejected.length,
         particles: this.particles.items.length,
         mergeTimers: this.player ? this.player.cells.map((cell) => Number(cell.mergeTimer.toFixed(2))) : []
       };
@@ -1941,7 +2639,10 @@
       };
 
       this.drawArena(ctx, view, zoom, time);
+      this.drawSpikeZones(ctx, game, view, zoom, time);
       this.drawFood(ctx, game, view, time);
+      this.drawViruses(ctx, game, view, zoom, time);
+      this.drawEjected(ctx, game, view, zoom, time);
 
       const playerCells = game.player.cells;
       let playerMaxMass = 0;
@@ -2041,17 +2742,138 @@
       ctx.stroke();
     }
 
+    drawSpikeZones(ctx, game, view, zoom, time) {
+      for (const zone of game.safeZones) {
+        const reach = zone.radius + zone.spikeSize * 3;
+        if (zone.x + reach < view.left || zone.x - reach > view.right || zone.y + reach < view.top || zone.y - reach > view.bottom) continue;
+        const pulse = 0.5 + Math.sin(time * 1.25 + zone.phase) * 0.12;
+        ctx.save();
+        const inner = zone.radius - zone.spikeSize * 0.9;
+        const glow = ctx.createRadialGradient(zone.x, zone.y, inner * 0.2, zone.x, zone.y, inner);
+        glow.addColorStop(0, 'rgba(60, 245, 198, 0.015)');
+        glow.addColorStop(0.72, 'rgba(60, 245, 198, 0.045)');
+        glow.addColorStop(1, 'rgba(60, 245, 198, 0.10)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(zone.x, zone.y, inner, 0, TAU);
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(150, 255, 205, ${0.16 + pulse * 0.16})`;
+        ctx.lineWidth = Math.max(1.2, 2.2 / zoom);
+        ctx.setLineDash([10 / zoom, 8 / zoom]);
+        ctx.beginPath();
+        ctx.arc(zone.x, zone.y, inner, 0, TAU);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (this.glowEnabled) {
+          ctx.shadowColor = 'rgba(160, 255, 105, 0.55)';
+          ctx.shadowBlur = 14;
+        }
+        ctx.fillStyle = `rgba(178, 255, 112, ${0.58 + pulse * 0.22})`;
+        const step = TAU / zone.spikeCount;
+        const base = zone.radius - zone.spikeSize * 0.45;
+        const tip = zone.radius + zone.spikeSize * 1.45;
+        for (let i = 0; i < zone.spikeCount; i += 1) {
+          const angle = i * step + zone.phase * 0.04;
+          const half = step * 0.34;
+          ctx.beginPath();
+          ctx.moveTo(zone.x + Math.cos(angle - half) * base, zone.y + Math.sin(angle - half) * base);
+          ctx.lineTo(zone.x + Math.cos(angle) * tip, zone.y + Math.sin(angle) * tip);
+          ctx.lineTo(zone.x + Math.cos(angle + half) * base, zone.y + Math.sin(angle + half) * base);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+    }
+
+    drawViruses(ctx, game, view, zoom, time) {
+      for (const virus of game.viruses) {
+        if (!virus.active) continue;
+        const reach = virus.radius * 1.7;
+        if (virus.x + reach < view.left || virus.x - reach > view.right || virus.y + reach < view.top || virus.y - reach > view.bottom) continue;
+        const pulse = 1 + Math.sin(time * 2.2 + virus.phase) * 0.035 + virus.pulse * 0.16;
+        const radius = virus.radius * pulse;
+        ctx.save();
+        ctx.translate(virus.x, virus.y);
+        ctx.rotate(virus.rotation);
+        if (this.glowEnabled) {
+          ctx.shadowColor = 'rgba(180, 255, 90, 0.8)';
+          ctx.shadowBlur = 22;
+        }
+        ctx.fillStyle = 'rgba(154, 255, 78, 0.92)';
+        const spikes = 14;
+        for (let i = 0; i < spikes; i += 1) {
+          const angle = (i / spikes) * TAU;
+          const half = (TAU / spikes) * 0.34;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(angle - half) * radius * 0.7, Math.sin(angle - half) * radius * 0.7);
+          ctx.lineTo(Math.cos(angle) * radius * 1.18, Math.sin(angle) * radius * 1.18);
+          ctx.lineTo(Math.cos(angle + half) * radius * 0.7, Math.sin(angle + half) * radius * 0.7);
+          ctx.closePath();
+          ctx.fill();
+        }
+        const core = ctx.createRadialGradient(-radius * 0.25, -radius * 0.3, radius * 0.05, 0, 0, radius * 0.8);
+        core.addColorStop(0, '#f2ffc0');
+        core.addColorStop(0.32, '#b9ff65');
+        core.addColorStop(1, '#3c7f2e');
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.72, 0, TAU);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(238, 255, 190, 0.65)';
+        ctx.lineWidth = Math.max(1, 1.5 / zoom);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.72, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    drawEjected(ctx, game, view, zoom, time) {
+      for (const pellet of game.ejected) {
+        if (pellet.x < view.left || pellet.x > view.right || pellet.y < view.top || pellet.y > view.bottom) continue;
+        const fade = clamp((pellet.life - pellet.age) / 0.45, 0, 1);
+        ctx.globalAlpha = fade;
+        if (this.glowEnabled) {
+          ctx.shadowColor = '#c8fff1';
+          ctx.shadowBlur = 12;
+        }
+        ctx.strokeStyle = 'rgba(190, 255, 237, 0.38)';
+        ctx.lineWidth = Math.max(1, 3 / zoom);
+        ctx.beginPath();
+        ctx.moveTo(pellet.x - pellet.vx * 0.035, pellet.y - pellet.vy * 0.035);
+        ctx.lineTo(pellet.x, pellet.y);
+        ctx.stroke();
+        ctx.fillStyle = '#d8fff7';
+        ctx.beginPath();
+        ctx.arc(pellet.x, pellet.y, pellet.r * (1 + Math.sin(time * 7 + pellet.phase) * 0.08), 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(60, 245, 198, 0.7)';
+        ctx.beginPath();
+        ctx.arc(pellet.x, pellet.y, pellet.r * 0.55, 0, TAU);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      ctx.globalAlpha = 1;
+    }
+
     drawFood(ctx, game, view, time) {
       for (const food of game.foods) {
         if (!food.active) continue;
         if (food.x < view.left || food.x > view.right || food.y < view.top || food.y > view.bottom) continue;
-        const pulse = 1 + Math.sin(time * 2.6 + food.phase) * 0.14;
+        const tier = food.tier || 'medium';
+        const pulseSpeed = tier === 'large' ? 1.5 : 2.6;
+        const pulse = 1 + Math.sin(time * pulseSpeed + food.phase) * (tier === 'large' ? 0.09 : 0.14);
         const radius = food.r * pulse;
         if (this.glowEnabled) {
-          ctx.globalAlpha = 0.13;
+          ctx.globalAlpha = food.tierGlow == null ? 0.13 : food.tierGlow;
           ctx.fillStyle = food.color;
           ctx.beginPath();
-          ctx.arc(food.x, food.y, radius * 2.35, 0, TAU);
+          ctx.arc(food.x, food.y, radius * (tier === 'large' ? 2.8 : 2.35), 0, TAU);
           ctx.fill();
         }
         ctx.globalAlpha = 0.95;
@@ -2064,6 +2886,19 @@
         ctx.beginPath();
         ctx.arc(food.x - radius * 0.24, food.y - radius * 0.28, radius * 0.3, 0, TAU);
         ctx.fill();
+        if (tier === 'large') {
+          ctx.globalAlpha = 0.52;
+          ctx.strokeStyle = food.color;
+          ctx.lineWidth = Math.max(1, 1.7 / Math.max(0.2, game.camera.zoom));
+          ctx.beginPath();
+          ctx.arc(food.x, food.y, radius * 1.48, 0, TAU);
+          ctx.stroke();
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(food.x + Math.cos(time * 1.4 + food.phase) * radius * 1.65, food.y + Math.sin(time * 1.4 + food.phase) * radius * 1.65, Math.max(1.2, radius * 0.12), 0, TAU);
+          ctx.fill();
+        }
       }
       ctx.globalAlpha = 1;
     }
@@ -2076,6 +2911,13 @@
       const radius = targetRadius * pulse;
 
       cell.flash = Math.max(0, cell.flash - delta * 2.6);
+      cell.squash = Math.max(0, cell.squash - delta * 3.2);
+      cell.splitAnim = Math.max(0, cell.splitAnim - delta * 1.8);
+      cell.mergeGlow = Math.max(0, cell.mergeGlow - delta * 2.4);
+      const bumpLength = Math.hypot(cell.bumpX, cell.bumpY) || 1;
+      const bumpX = cell.bumpX / bumpLength;
+      const bumpY = cell.bumpY / bumpLength;
+      const stretch = cell.squash * 0.12 + cell.splitAnim * 0.055;
 
       if (this.glowEnabled) {
         ctx.shadowColor = colors.glow;
@@ -2099,8 +2941,18 @@
       for (let i = 0; i <= segments; i += 1) {
         const angle = (i / segments) * TAU;
         const wobble = 1 + Math.sin(angle * 3 + time * 1.25 + cell.phase) * 0.012 + Math.sin(angle * 5 - time * 0.8) * 0.006;
-        const px = cell.x + Math.cos(angle) * radius * wobble;
-        const py = cell.y + Math.sin(angle) * radius * wobble;
+        let px = Math.cos(angle) * radius * wobble;
+        let py = Math.sin(angle) * radius * wobble;
+        if (stretch > 0.001) {
+          const along = px * bumpX + py * bumpY;
+          px += bumpX * along * stretch;
+          py += bumpY * along * stretch;
+          const perp = -px * bumpY + py * bumpX;
+          px += bumpY * perp * stretch * 0.32;
+          py -= bumpX * perp * stretch * 0.32;
+        }
+        px += cell.x;
+        py += cell.y;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
@@ -2146,6 +2998,26 @@
         ctx.lineWidth = Math.max(1.4, radius * 0.05);
         ctx.beginPath();
         ctx.arc(cell.x, cell.y, radius * (1 + (1 - cell.flash) * 0.22), 0, TAU);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      if (cell.splitAnim > 0.01) {
+        ctx.globalAlpha = cell.splitAnim * 0.34;
+        ctx.strokeStyle = colors.a;
+        ctx.lineWidth = Math.max(1, 2 / zoom);
+        ctx.beginPath();
+        ctx.arc(cell.x, cell.y, radius * (1.2 + (1 - cell.splitAnim) * 0.55), 0, TAU);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      if (cell.mergeGlow > 0.01) {
+        ctx.globalAlpha = cell.mergeGlow * 0.45;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1.4, 2.5 / zoom);
+        ctx.beginPath();
+        ctx.arc(cell.x, cell.y, radius + 12 / zoom, 0, TAU);
         ctx.stroke();
         ctx.globalAlpha = 1;
       }
@@ -2310,6 +3182,27 @@
         ctx.moveTo(0, p); ctx.lineTo(size, p);
         ctx.stroke();
       }
+
+      for (const zone of game.safeZones) {
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = '#8dffc4';
+        ctx.beginPath();
+        ctx.arc(pad + zone.x * scale, pad + zone.y * scale, Math.max(2, zone.radius * scale), 0, TAU);
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = '#b6ff7a';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      for (const virus of game.viruses) {
+        if (!virus.active) continue;
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = '#b6ff5c';
+        ctx.beginPath();
+        ctx.arc(pad + virus.x * scale, pad + virus.y * scale, 2.2, 0, TAU);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
 
       const playerCells = game.player.cells;
       for (const team of game.teams) {
@@ -2547,10 +3440,17 @@
     handleKeyDown(event) {
       if (this.isTypingTarget(event)) return;
       const key = event.key.toLowerCase();
-      const movementKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      const movementKeys = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
       if (movementKeys.includes(key)) {
         this.keys.add(key);
         if (this.game.state === 'playing') event.preventDefault();
+        return;
+      }
+      if (key === 'w') {
+        if (this.game.state === 'playing') {
+          event.preventDefault();
+          this.game.ejectMass();
+        }
         return;
       }
       if (event.code === 'Space' || event.key === ' ') {
@@ -2568,10 +3468,10 @@
     getKeyboardDir() {
       let x = 0;
       let y = 0;
-      if (this.keys.has('a') || this.keys.has('arrowleft')) x -= 1;
-      if (this.keys.has('d') || this.keys.has('arrowright')) x += 1;
-      if (this.keys.has('w') || this.keys.has('arrowup')) y -= 1;
-      if (this.keys.has('s') || this.keys.has('arrowdown')) y += 1;
+      if (this.keys.has('arrowleft')) x -= 1;
+      if (this.keys.has('arrowright')) x += 1;
+      if (this.keys.has('arrowup')) y -= 1;
+      if (this.keys.has('arrowdown')) y += 1;
       if (x === 0 && y === 0) return null;
       const length = Math.hypot(x, y);
       return { x: x / length, y: y / length };
@@ -2681,6 +3581,7 @@
       this.btnAgain = byId('cw-btn-again');
       this.btnGameoverMenu = byId('cw-btn-gameover-menu');
       this.touchSplit = byId('cw-btn-touch-split');
+      this.touchEject = byId('cw-btn-touch-eject');
     }
 
     // -----------------------------------------------------------------------
@@ -3041,6 +3942,12 @@
         this.game.splitPlayer();
       });
 
+      if (this.touchEject) {
+        this.touchEject.addEventListener('click', () => {
+          this.game.ejectMass();
+        });
+      }
+
       this.difficultyGrid.addEventListener('click', (event) => {
         const card = event.target.closest('.cw-diff-card');
         if (card) this.selectDifficulty(card.dataset.diff);
@@ -3323,6 +4230,8 @@
         this.audio.rankOne();
       } else if (type === 'cell-lost' && data && data.remaining > 0) {
         this.showToast(`ZELLE VERLOREN · ${data.remaining} ÜBRIG`, 'warn');
+      } else if (type === 'virus-pop') {
+        this.showToast('VIRUS GEPLATZT · ZELLEN AUFGETEILT', 'warn');
       }
     }
 

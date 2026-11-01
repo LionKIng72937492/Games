@@ -52,11 +52,12 @@
       </div>
 
       <div id="cw-controls-hint" class="cw-hint cw-glass">
-        <span class="cw-hint-desktop"><b>MAUS / WASD</b> BEWEGEN &nbsp;·&nbsp; <b>LEER / KLICK</b> TEILEN &nbsp;·&nbsp; <b>ESC</b> PAUSE</span>
-        <span class="cw-hint-touch"><b>ZIEHEN</b> BEWEGEN &nbsp;·&nbsp; <b>SPLIT</b> TEILEN</span>
+        <span class="cw-hint-desktop"><b>MAUS / PFEILE</b> BEWEGEN &nbsp;·&nbsp; <b>LEER / KLICK</b> TEILEN &nbsp;·&nbsp; <b>W</b> MASSE AUSSTOSSEN &nbsp;·&nbsp; <b>ESC</b> PAUSE</span>
+        <span class="cw-hint-touch"><b>ZIEHEN</b> BEWEGEN &nbsp;·&nbsp; <b>SPLIT</b> TEILEN &nbsp;·&nbsp; <b>W</b> MASSE</span>
       </div>
 
       <button type="button" id="cw-btn-touch-split" class="cw-touch-split" aria-label="Zelle teilen">SPLIT</button>
+      <button type="button" id="cw-btn-touch-eject" class="cw-touch-eject" aria-label="Masse ausstoßen">W</button>
     </div>
 
     <!-- Screens -->
@@ -67,7 +68,7 @@
             <div class="cw-brandline"><span class="cw-status-dot"></span> BIO-ARENA // LOKALE SIMULATION</div>
             <h1 class="cw-logo"><span class="cw-logo-cell">CELL</span><span class="cw-logo-wars">WARS</span></h1>
             <p class="cw-tagline">GROW. HUNT. DOMINATE.</p>
-            <p class="cw-lede">Eine lebendige Mikro-Arena. Friss, wachse und stelle dich bis zu zwanzig lokalen KI-Zellen. Nur eine Spezies beherrscht das Becken.</p>
+            <p class="cw-lede">Eine lebendige Mikro-Arena. Friss, wachse und stelle dich bis zu 34 lokalen KI-Zellen. Nur eine Spezies beherrscht das Becken.</p>
 
             <nav class="cw-menu-actions" aria-label="Hauptmenü">
               <button type="button" id="cw-btn-play" class="cw-btn cw-btn-primary">
@@ -153,10 +154,10 @@
               </div>
 
               <ul class="cw-rules">
-                <li><b>Nahrung</b> einsammeln lässt dich wachsen.</li>
+                <li><b>Nahrung</b> einsammeln lässt dich wachsen. Große Pellets sind selten und wertvoll.</li>
                 <li><b>Größere Zellen</b> fressen kleinere.</li>
-                <li><b>Leertaste</b> teilt deine Zelle.</li>
-                <li>Überlebe und führe die Rangliste an.</li>
+                <li><b>Leertaste</b> teilt deine Zelle, <b>W</b> stößt Masse aus.</li>
+                <li><b>Stachel-Kreise</b> schützen kleine Zellen; <b>Viren</b> lassen große Zellen platzen.</li>
               </ul>
             </aside>
           </div>
@@ -223,8 +224,9 @@
               <div class="cw-section-label">STEUERUNG</div>
               <div class="cw-controls-grid">
                 <div><span>MAUS</span><b>Richtung</b></div>
-                <div><span>W A S D / PFEILE</span><b>Richtung</b></div>
+                <div><span>PFEILTASTEN</span><b>Richtung</b></div>
                 <div><span>LEER / LINKSKLICK</span><b>Zelle teilen</b></div>
+                <div><span>W</span><b>Masse ausstoßen</b></div>
                 <div><span>ESC</span><b>Pause</b></div>
               </div>
               <p class="cw-micro">Alle Einstellungen werden lokal in deinem Browser gespeichert.</p>
