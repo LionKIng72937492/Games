@@ -401,6 +401,104 @@
       color: #e7ffb8;
     }
 
+    /* NEON FRONTIER — scoped cyber-defense identity */
+    .neonfrontier-card {
+      border-color: rgba(0, 240, 255, 0.38);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 240, 255, 0.16);
+    }
+
+    .neonfrontier-card:hover {
+      border-color: #00f0ff;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.75), 0 0 48px rgba(0, 240, 255, 0.4), 0 0 34px rgba(255, 0, 119, 0.16);
+    }
+
+    .neonfrontier-banner {
+      background:
+        radial-gradient(circle at 62% 42%, rgba(0, 240, 255, 0.16) 0%, rgba(30, 12, 66, 0.55) 35%, #05040d 100%);
+      border-bottom-color: rgba(0, 240, 255, 0.24);
+    }
+
+    .neonfrontier-card .card-badge {
+      right: 14px;
+      background: linear-gradient(135deg, #ff0077, #7000ff);
+      color: #fff;
+      box-shadow: 0 0 14px rgba(255, 0, 119, 0.5);
+    }
+
+    .neonfrontier-card .card-badge.tag-td {
+      right: auto;
+      left: 14px;
+      background: rgba(5, 17, 28, 0.86);
+      border: 1px solid rgba(0, 240, 255, 0.5);
+      color: #9ff9ff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.22);
+    }
+
+    .neonfrontier-art {
+      width: 100%;
+      height: 100%;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+
+    .neonfrontier-card:hover .neonfrontier-art {
+      transform: scale(1.035);
+    }
+
+    .nf-hub-ring,
+    .nf-hub-core {
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    .nf-hub-ring {
+      animation: nf-hub-spin 20s linear infinite;
+    }
+
+    .nf-hub-core {
+      animation: nf-hub-pulse 2.8s ease-in-out infinite;
+    }
+
+    @keyframes nf-hub-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes nf-hub-pulse {
+      0%, 100% { opacity: 0.82; transform: scale(0.96); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+
+    .neonfrontier-card .game-title {
+      color: #e4fdff;
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.75);
+    }
+
+    .neonfrontier-card .card-btn {
+      background: linear-gradient(135deg, #00f0ff, #0077ff 55%, #7000ff);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.42);
+    }
+
+    .neonfrontier-card:hover .card-btn {
+      background: linear-gradient(135deg, #7ffaff, #00c8ff 48%, #b26bff);
+      box-shadow: 0 0 32px rgba(0, 240, 255, 0.78), 0 0 20px rgba(255, 0, 119, 0.2);
+    }
+
+    .neonfrontier-card .feature-tag {
+      background: rgba(0, 240, 255, 0.07);
+      border-color: rgba(0, 240, 255, 0.24);
+      color: #d4faff;
+    }
+
+    .neonfrontier-card .tag-cyan {
+      border-color: rgba(0, 240, 255, 0.34);
+      color: #9ff9ff;
+    }
+
+    .neonfrontier-card .tag-pink {
+      border-color: rgba(255, 0, 119, 0.3);
+      color: #ffc1dc;
+    }
+
     /* Placeholder Card for upcoming games */
     .game-card.placeholder {
       border: 1.5px dashed rgba(255, 255, 255, 0.2);
@@ -594,7 +692,158 @@
         </div>
       </a>
 
-      <!-- 3. Placeholder Card for Future Games -->
+      <!-- 3. NEON FRONTIER: LAST DEFENSE -->
+      <a href="neon-frontier/index.html" class="game-card neonfrontier-card">
+        <div class="card-banner neonfrontier-banner">
+          <div class="card-badge tag-td">TOWER DEFENSE</div>
+          <div class="card-badge">NEU</div>
+          <div class="banner-graphic">
+            <svg class="neonfrontier-art" viewBox="0 0 380 220" role="img" aria-label="Cyberpunk-Stadt mit Verteidigungsroute, Türmen und Energiekern">
+              <defs>
+                <linearGradient id="nfHubSky" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#101b38"/>
+                  <stop offset="0.55" stop-color="#0a1024"/>
+                  <stop offset="1" stop-color="#05040d"/>
+                </linearGradient>
+                <radialGradient id="nfHubCore" cx="38%" cy="34%" r="70%">
+                  <stop offset="0" stop-color="#ffffff"/>
+                  <stop offset="0.28" stop-color="#9ffcff"/>
+                  <stop offset="0.7" stop-color="#00f0ff"/>
+                  <stop offset="1" stop-color="#0077ff"/>
+                </radialGradient>
+                <linearGradient id="nfHubBeam" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#00f0ff" stop-opacity="0"/>
+                  <stop offset="0.5" stop-color="#00f0ff" stop-opacity="0.8"/>
+                  <stop offset="1" stop-color="#ff0077" stop-opacity="0"/>
+                </linearGradient>
+                <pattern id="nfHubGrid" width="38" height="38" patternUnits="userSpaceOnUse">
+                  <path d="M38 0H0V38" fill="none" stroke="#00f0ff" stroke-opacity="0.08" stroke-width="1"/>
+                </pattern>
+                <filter id="nfHubGlow" x="-80%" y="-80%" width="260%" height="260%">
+                  <feGaussianBlur stdDeviation="5" result="blur"/>
+                  <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <rect width="380" height="220" fill="url(#nfHubSky)"/>
+              <rect width="380" height="220" fill="url(#nfHubGrid)"/>
+              <circle cx="300" cy="110" r="92" fill="#00f0ff" opacity="0.035"/>
+
+              <!-- Skyline -->
+              <g opacity="0.92">
+                <rect x="14" y="72" width="34" height="112" fill="#07101f" stroke="#00f0ff" stroke-opacity="0.2"/>
+                <rect x="54" y="96" width="26" height="88" fill="#0a0b1a" stroke="#ff0077" stroke-opacity="0.18"/>
+                <rect x="86" y="52" width="40" height="132" fill="#07101f" stroke="#00f0ff" stroke-opacity="0.22"/>
+                <rect x="132" y="86" width="28" height="98" fill="#0a0b1a" stroke="#ff0077" stroke-opacity="0.2"/>
+                <rect x="166" y="38" width="46" height="146" fill="#07101f" stroke="#00f0ff" stroke-opacity="0.22"/>
+                <rect x="218" y="80" width="30" height="104" fill="#0a0b1a" stroke="#ff0077" stroke-opacity="0.18"/>
+                <rect x="254" y="58" width="38" height="126" fill="#07101f" stroke="#00f0ff" stroke-opacity="0.2"/>
+                <rect x="326" y="76" width="38" height="108" fill="#0a0b1a" stroke="#ff0077" stroke-opacity="0.18"/>
+                <g fill="#00f0ff" opacity="0.4">
+                  <rect x="20" y="82" width="4" height="3"/><rect x="30" y="96" width="4" height="3"/>
+                  <rect x="20" y="116" width="4" height="3"/><rect x="36" y="136" width="4" height="3"/>
+                  <rect x="94" y="64" width="5" height="3"/><rect x="108" y="82" width="5" height="3"/>
+                  <rect x="94" y="108" width="5" height="3"/><rect x="112" y="134" width="5" height="3"/>
+                  <rect x="176" y="52" width="5" height="3"/><rect x="192" y="74" width="5" height="3"/>
+                  <rect x="176" y="102" width="5" height="3"/><rect x="198" y="130" width="5" height="3"/>
+                  <rect x="262" y="70" width="5" height="3"/><rect x="278" y="92" width="5" height="3"/>
+                  <rect x="262" y="120" width="5" height="3"/><rect x="334" y="92" width="5" height="3"/>
+                  <rect x="348" y="116" width="5" height="3"/>
+                </g>
+                <g fill="#ff0077" opacity="0.34">
+                  <rect x="62" y="108" width="4" height="3"/><rect x="70" y="132" width="4" height="3"/>
+                  <rect x="140" y="98" width="4" height="3"/><rect x="140" y="124" width="4" height="3"/>
+                  <rect x="226" y="92" width="4" height="3"/><rect x="232" y="120" width="4" height="3"/>
+                </g>
+                <rect x="106" y="34" width="2" height="18" fill="#00f0ff" opacity="0.45"/>
+                <circle cx="107" cy="32" r="2.5" fill="#00f0ff" filter="url(#nfHubGlow)"/>
+                <rect x="188" y="20" width="2" height="18" fill="#ff0077" opacity="0.5"/>
+                <circle cx="189" cy="18" r="2.5" fill="#ff0077" filter="url(#nfHubGlow)"/>
+              </g>
+
+              <!-- Defense route -->
+              <polyline points="8,166 74,166 74,88 152,88 152,166 232,166 232,112 300,112" fill="none" stroke="#00c9e8" stroke-opacity="0.16" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="8,166 74,166 74,88 152,88 152,166 232,166 232,112 300,112" fill="none" stroke="#081a28" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="8,166 74,166 74,88 152,88 152,166 232,166 232,112 300,112" fill="none" stroke="url(#nfHubBeam)" stroke-width="1.5" stroke-dasharray="5 6" stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- Defense turrets -->
+              <g filter="url(#nfHubGlow)">
+                <g transform="translate(42 134)">
+                  <circle r="8" fill="#061522" stroke="#00f0ff" stroke-width="1.2"/>
+                  <circle r="3" fill="#00f0ff"/><path d="M0 0L11 -5" stroke="#00f0ff" stroke-width="2"/>
+                </g>
+                <g transform="translate(108 126)">
+                  <circle r="8" fill="#061522" stroke="#ff0077" stroke-width="1.2"/>
+                  <circle r="3" fill="#ff0077"/><path d="M0 0L-10 -5" stroke="#ff0077" stroke-width="2"/>
+                </g>
+                <g transform="translate(204 126)">
+                  <circle r="8" fill="#061522" stroke="#00f0ff" stroke-width="1.2"/>
+                  <circle r="3" fill="#00f0ff"/><path d="M0 0L10 -4" stroke="#00f0ff" stroke-width="2"/>
+                </g>
+                <g transform="translate(268 150)">
+                  <circle r="8" fill="#061522" stroke="#ffe600" stroke-width="1.2"/>
+                  <circle r="3" fill="#ffe600"/><path d="M0 0L0 -11" stroke="#ffe600" stroke-width="2"/>
+                </g>
+              </g>
+
+              <!-- Incoming machines -->
+              <g filter="url(#nfHubGlow)">
+                <path d="M20 166L30 161L30 171Z" fill="#ff0077"/>
+                <path d="M88 88L98 83L98 93Z" fill="#ff6b9d"/>
+                <path d="M124 166L134 161L134 171Z" fill="#ffb347"/>
+              </g>
+
+              <!-- Energy core -->
+              <g transform="translate(300 112)">
+                <circle r="31" fill="#00f0ff" opacity="0.06"/>
+                <circle class="nf-hub-ring" r="24" fill="none" stroke="#00f0ff" stroke-opacity="0.55" stroke-width="1.2" stroke-dasharray="6 5"/>
+                <circle r="18" fill="none" stroke="#ff0077" stroke-opacity="0.36" stroke-width="1"/>
+                <circle class="nf-hub-core" r="11" fill="url(#nfHubCore)" filter="url(#nfHubGlow)"/>
+                <circle r="4" fill="#ffffff"/>
+                <g fill="#00f0ff" opacity="0.8">
+                  <circle cx="0" cy="-27" r="1.6"/><circle cx="26" cy="0" r="1.6"/>
+                  <circle cx="0" cy="27" r="1.6"/><circle cx="-26" cy="0" r="1.6"/>
+                </g>
+              </g>
+
+              <!-- Scanline accents -->
+              <rect x="0" y="196" width="380" height="1" fill="#00f0ff" opacity="0.16"/>
+              <rect x="0" y="204" width="380" height="1" fill="#ff0077" opacity="0.1"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div>
+            <div class="game-title">
+              <span>◈</span> NEON FRONTIER
+            </div>
+            <p class="game-desc" style="margin-top: 8px;">
+              Cyberpunk Tower Defense um den letzten Energiekern: 5 Turmklassen, 30 Wellen,
+              3 Bosse, vier Schwierigkeitsgrade, Forschung, Doktrin und aktive Spezialfähigkeiten.
+            </p>
+          </div>
+
+          <div class="feature-tags">
+            <span class="feature-tag">🏙️ 3 Karten</span>
+            <span class="feature-tag">🛡️ 30 Wellen</span>
+            <span class="feature-tag tag-cyan">⚡ 4 Fähigkeiten</span>
+            <span class="feature-tag tag-pink">☠ 3 Bosse</span>
+            <span class="feature-tag">⌬ Tech-Tree</span>
+            <span class="feature-tag">💾 Save &amp; Resume</span>
+          </div>
+
+          <div class="card-btn">
+            <span>VERTEIDIGUNG STARTEN</span>
+            <span>➔</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 4. Placeholder Card for Future Games -->
       <div class="game-card placeholder">
         <div class="card-banner" style="background: radial-gradient(circle, #0e0a24 0%, #04020a 100%);">
           <div style="font-family:'Orbitron'; font-size: 38px; color: rgba(255,255,255,0.15);">

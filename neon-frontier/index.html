@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#080b14">
+  <meta name="description" content="NEON FRONTIER: LAST DEFENSE – Cyberpunk Tower Defense im Browser. Verteidige den letzten Energiekern gegen die Maschinenarmee.">
+  <title>NEON FRONTIER: LAST DEFENSE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="nf-app" class="nf-app">
+    <canvas id="nf-canvas" class="nf-canvas" aria-label="Neon Frontier Spielfeld"></canvas>
+    <div class="nf-vignette" aria-hidden="true"></div>
+    <div class="nf-scanlines" aria-hidden="true"></div>
+
+    <!-- ==================== MAIN MENU ==================== -->
+    <section id="nf-menu" class="nf-screen nf-menu">
+      <div class="nf-menu-top">
+        <div class="nf-brand">
+          <div class="nf-brand-kicker"><span class="nf-pulse-dot"></span> CYBER DEFENSE PROTOCOL // ONLINE <a class="nf-hub-link nf-hub-link-inline" href="../index.html">← ZURÜCK ZUM HUB</a></div>
+          <h1><span>NEON</span> FRONTIER</h1>
+          <h2>LAST DEFENSE</h2>
+          <p class="nf-brand-copy">
+            Die letzte Stadt der Menschheit brennt. Übernimm das Verteidigungsnetz,
+            baue fünf Turmklassen, erforsche verbotene Technologie und halte den
+            Energiekern gegen die Maschinenarmee.
+          </p>
+        </div>
+        <div class="nf-profile-chip" id="nf-profile-chip">
+          <div class="nf-profile-level">
+            <span class="nf-profile-label">KOMMANDO-LEVEL</span>
+            <strong id="nf-menu-level">01</strong>
+          </div>
+          <div class="nf-profile-bar"><span id="nf-menu-xp-bar"></span></div>
+          <div class="nf-profile-meta">
+            <span id="nf-menu-xp">0 / 80 XP</span>
+            <span id="nf-menu-doctrine">1 DOKTRIN-PUNKT</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="nf-menu-grid">
+        <nav class="nf-menu-actions" aria-label="Hauptmenü">
+          <button type="button" class="nf-btn nf-btn-primary nf-btn-large" data-menu-action="play">
+            <span class="nf-btn-icon">▶</span>
+            <span><b>PLAY</b><small>Verteidigung starten</small></span>
+          </button>
+          <button type="button" class="nf-btn" data-menu-action="maps"><span class="nf-btn-icon">⌁</span><span><b>MAP SELECT</b><small>Einsatzgebiet wählen</small></span></button>
+          <button type="button" class="nf-btn" data-menu-action="upgrades"><span class="nf-btn-icon">✦</span><span><b>UPGRADES</b><small>Doktrin &amp; Skins</small></span></button>
+          <button type="button" class="nf-btn" data-menu-action="technology"><span class="nf-btn-icon">⌬</span><span><b>TECHNOLOGY</b><small>Forschung freischalten</small></span></button>
+          <button type="button" class="nf-btn" data-menu-action="statistics"><span class="nf-btn-icon">▥</span><span><b>STATISTICS</b><small>Erfolge &amp; Rekorde</small></span></button>
+          <button type="button" class="nf-btn" data-menu-action="settings"><span class="nf-btn-icon">⚙</span><span><b>SETTINGS</b><small>Audio, Effekte, Daten</small></span></button>
+        </nav>
+
+        <aside class="nf-menu-briefing">
+          <div class="nf-briefing-head"><span>EINSATZSTATUS</span><b id="nf-menu-map-name">NEON CITY</b></div>
+          <div class="nf-briefing-stats">
+            <div><span>BESTE WELLE</span><b id="nf-menu-best-wave">0</b></div>
+            <div><span>BOSS-KILLS</span><b id="nf-menu-bosses">0</b></div>
+            <div><span>HIGHSCORE</span><b id="nf-menu-score">0</b></div>
+          </div>
+          <div class="nf-briefing-core">
+            <div class="nf-briefing-core-ring" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div>
+              <span class="nf-briefing-label">LETZTER ENERGIekern</span>
+              <strong>DEFCON 1</strong>
+              <small id="nf-menu-last-run">Noch kein Einsatz abgeschlossen.</small>
+            </div>
+          </div>
+          <div class="nf-briefing-footer">
+            <span>LOCAL SAVE</span><span>OFFLINE READY</span><span>60 FPS</span>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="nf-menu-footer">
+        <span>NEON FRONTIER // LAST DEFENSE</span>
+        <span>BUILD 1.0 · HTML5 CANVAS · WEB AUDIO</span>
+        <a class="nf-hub-link" href="../index.html">← ZURÜCK ZUM HUB</a>
+      </footer>
+    </section>
+
+    <!-- ==================== IN-GAME HUD ==================== -->
+    <section id="nf-hud" class="nf-hud nf-hidden">
+      <header class="nf-hud-top">
+        <div class="nf-resources" aria-label="Ressourcen">
+          <div class="nf-resource nf-resource-credit"><span class="nf-resource-icon">◈</span><span><small>CREDITS</small><b id="nf-hud-credits">0</b></span></div>
+          <div class="nf-resource nf-resource-energy"><span class="nf-resource-icon">ϟ</span><span><small>ENERGIE</small><b id="nf-hud-energy">100</b></span><i class="nf-resource-fill" id="nf-hud-energy-fill"></i></div>
+          <div class="nf-resource nf-resource-research"><span class="nf-resource-icon">⌬</span><span><small>FORSCHUNG</small><b id="nf-hud-research">0</b></span></div>
+        </div>
+
+        <div class="nf-wave-block">
+          <div class="nf-wave-line"><span id="nf-hud-wave">WELLE 01</span><b id="nf-hud-wave-state">BEREIT</b></div>
+          <div class="nf-wave-progress"><span id="nf-hud-wave-fill"></span></div>
+          <div class="nf-wave-sub"><span id="nf-hud-enemies">0 GEGNER</span><span id="nf-hud-difficulty">NORMAL</span></div>
+        </div>
+
+        <div class="nf-core-block">
+          <div class="nf-core-head"><span>ENERGIEKERN</span><b id="nf-hud-core-text">120 / 120</b></div>
+          <div class="nf-core-bar"><span id="nf-hud-core-fill"></span></div>
+          <div class="nf-core-sub"><span id="nf-hud-core-status">STABIL</span><span id="nf-hud-score">SCORE 0</span></div>
+        </div>
+
+        <div class="nf-hud-actions">
+          <div class="nf-speed-group" aria-label="Spielgeschwindigkeit">
+            <button type="button" class="nf-icon-btn nf-speed-btn is-active" data-speed="1">1×</button>
+            <button type="button" class="nf-icon-btn nf-speed-btn" data-speed="2">2×</button>
+            <button type="button" class="nf-icon-btn nf-speed-btn" data-speed="3">3×</button>
+          </div>
+          <button type="button" id="nf-btn-tech" class="nf-icon-btn" title="Technologie (T)">⌬</button>
+          <button type="button" id="nf-btn-pause" class="nf-icon-btn" title="Pause (Leertaste)">Ⅱ</button>
+          <button type="button" id="nf-btn-menu" class="nf-icon-btn" title="Hauptmenü">☰</button>
+        </div>
+      </header>
+
+      <aside id="nf-tower-palette" class="nf-palette" aria-label="Turmauswahl"></aside>
+
+      <aside id="nf-inspector" class="nf-inspector" aria-label="Turm-Inspektor">
+        <div class="nf-inspector-empty">
+          <div class="nf-inspector-emblem">⌖</div>
+          <strong>KEIN TURM AUSGEWÄHLT</strong>
+          <p>Wähle eine Turmklasse und platziere sie auf einer freien Fläche. Verkaufte Türme geben ihre Fläche wieder frei. Klicke einen Turm an, um ihn zu verbessern.</p>
+        </div>
+      </aside>
+
+      <div id="nf-ability-bar" class="nf-ability-bar" aria-label="Spezialfähigkeiten"></div>
+
+      <div id="nf-wave-panel" class="nf-wave-panel">
+        <div class="nf-wave-panel-text"><span id="nf-wave-countdown">NÄCHSTE WELLE IN 10</span><small id="nf-wave-panel-sub">Verteidigung vorbereiten</small></div>
+        <button type="button" id="nf-btn-next-wave" class="nf-btn nf-btn-small nf-btn-primary">NÄCHSTE WELLE</button>
+      </div>
+
+      <div id="nf-boss-bar" class="nf-boss-bar nf-hidden">
+        <div class="nf-boss-head"><span id="nf-boss-name">TITAN-01</span><b id="nf-boss-phase">PHASE 1</b></div>
+        <div class="nf-boss-track"><span id="nf-boss-fill"></span><i id="nf-boss-shield-fill"></i></div>
+        <div class="nf-boss-sub"><span id="nf-boss-hp">0 / 0</span><span>BOSS-SIGNATUR ERKANNT</span></div>
+      </div>
+
+      <div id="nf-hint" class="nf-hint">
+        <span class="nf-hint-desktop"><b>MAUS</b> Freie Fläche bauen · <b>RECHTSKLICK</b> Abbrechen · <b>1–4</b> Fähigkeiten · <b>LEERTASTE</b> Pause</span>
+        <span class="nf-hint-touch"><b>TIPPE</b> freie Fläche · <b>TIPPE TURM</b> Inspector · <b>FÄHIGKEIT</b> dann Ziel</span>
+      </div>
+
+      <div id="nf-placement-hint" class="nf-placement-hint nf-hidden">
+        <span id="nf-placement-text">FREIE FLÄCHE WÄHLEN</span>
+        <button type="button" id="nf-btn-cancel-placement">ABBRECHEN</button>
+      </div>
+    </section>
+
+    <!-- ==================== MODALS / TOASTS ==================== -->
+    <div id="nf-modal-root" class="nf-modal-root nf-hidden" role="dialog" aria-modal="true"></div>
+    <div id="nf-toast-root" class="nf-toast-root" aria-live="polite"></div>
+    <div id="nf-tooltip" class="nf-tooltip nf-hidden" role="tooltip"></div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
